@@ -14,14 +14,14 @@ import { formatISTDate } from '../lib/dateUtils';
 
 export default function DashboardPage() {
   const { transactions, addTransaction } = useTransactions();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
 
   // Redirect if not logged in
   React.useEffect(() => {
-    if (!user) router.push('/auth/login');
-  }, [user, router]);
+    if (!isLoading && !user) router.push('/auth/login');
+  }, [user, isLoading, router]);
 
   const totalCredit = transactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
   const totalDebit = transactions.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
@@ -33,7 +33,7 @@ export default function DashboardPage() {
     toast.success('Transaction added!');
   };
 
-  if (!user) return null;
+  if (isLoading || !user) return null;
 
   return (
     <Layout>

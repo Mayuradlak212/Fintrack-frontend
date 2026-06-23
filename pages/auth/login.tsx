@@ -7,9 +7,15 @@ import { toast } from 'react-toastify';
 import { LoginFormSchema, RegisterFormSchema } from '../../types';
 
 export default function LoginPage() {
-  const { login, register } = useAuth();
+  const { login, register, user, isLoading } = useAuth();
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
+  
+  React.useEffect(() => {
+    if (!isLoading && user) {
+      router.push('/');
+    }
+  }, [user, isLoading, router]);
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

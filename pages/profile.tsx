@@ -5,9 +5,11 @@ import { Camera, Save, User as UserIcon, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 
 export default function ProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, isLoading } = useAuth();
+  const router = useRouter();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -74,7 +76,11 @@ export default function ProfilePage() {
     }
   };
 
-  if (!user) return null;
+  useEffect(() => {
+    if (!isLoading && !user) router.push('/auth/login');
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user) return null;
 
   const avatarSrc = avatarBase64 ? `data:${avatarMimeType};base64,${avatarBase64}` : null;
 

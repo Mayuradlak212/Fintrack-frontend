@@ -15,7 +15,7 @@ type FilterType = 'all' | 'credit' | 'debit';
 
 export default function TransactionsPage() {
   const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   const [view, setView] = useState<'card' | 'table'>('card');
@@ -25,8 +25,8 @@ export default function TransactionsPage() {
   const [editTx, setEditTx] = useState<Transaction | null>(null);
 
   React.useEffect(() => {
-    if (!user) router.push('/auth/login');
-  }, [user, router]);
+    if (!isLoading && !user) router.push('/auth/login');
+  }, [user, isLoading, router]);
 
   const filtered = useMemo(() => {
     return transactions
@@ -60,7 +60,7 @@ export default function TransactionsPage() {
     toast.error('Transaction deleted');
   };
 
-  if (!user) return null;
+  if (isLoading || !user) return null;
 
   return (
     <Layout>
