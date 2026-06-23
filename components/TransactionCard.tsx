@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Paperclip, TrendingUp, TrendingDown, Calendar, Tag } from 'lucide-react';
+import { Pencil, Trash2, Paperclip, TrendingUp, TrendingDown, Calendar, Tag, MapPin } from 'lucide-react';
 import { Transaction } from '../types';
 import ConfirmDialog from './ConfirmDialog';
 import ReceiptViewer from './ReceiptViewer';
@@ -18,7 +18,7 @@ export default function TransactionCard({ tx, index, onEdit, onDelete }: Transac
   const [receiptOpen, setReceiptOpen] = useState(false);
 
   const isCredit = tx.type === 'credit';
-  const formatted = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'USD' }).format(tx.amount);
+  const formatted = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
   const dateStr = formatISTDateTime(tx.date);
   const wasEdited = tx.updatedAt && tx.updatedAt !== tx.createdAt;
   const updatedStr = wasEdited ? formatISTDateTime(tx.updatedAt!) : null;
@@ -66,6 +66,12 @@ export default function TransactionCard({ tx, index, onEdit, onDelete }: Transac
               <Calendar size={11} />
               {dateStr}
             </span>
+            {tx.location_text && (
+              <span className="flex items-center gap-1 text-txt-secondary bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.07]">
+                <MapPin size={10} />
+                {tx.location_text}
+              </span>
+            )}
             <span className="flex items-center gap-1">
               <Tag size={11} />
               {tx.category}

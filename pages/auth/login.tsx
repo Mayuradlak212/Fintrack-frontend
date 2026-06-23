@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { Wallet, Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
+import { Wallet, Eye, EyeOff, Lock, Mail, ArrowRight, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
+import { LoginFormSchema, RegisterFormSchema } from '../../types';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const router = useRouter();
+  const [isRegister, setIsRegister] = useState(false);
+  
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -17,20 +21,59 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 600)); // simulate network
-    const ok = login(email, password);
-    setLoading(false);
-    if (ok) {
-      toast.success('Welcome back! 👋');
-      router.push('/');
+    
+    // ── Client-side Zod Validation ──
+    if (isRegister) {
+      const result = RegisterFormSchema.safeParse({ name, email, password });
+      if (!result.success) {
+        const firstError = result.error.issues[0].message;
+        setError(firstError);
+        toast.error('Validation failed');
+        return;
+      }
     } else {
-      setError('Invalid email or password.');
-      toast.error('Login failed. Check your credentials.');
+      const result = LoginFormSchema.safeParse({ email, password });
+      if (!result.success) {
+        const firstError = result.error.issues[0].message;
+        setError(firstError);
+        toast.error('Validation failed');
+        return;
+      }
+    }
+
+    setLoading(true);
+    
+    try {
+      if (isRegister) {
+        const ok = await register({ name, email, password });
+        if (ok) {
+          toast.success('Account created successfully! 👋');
+          router.push('/');
+        }
+      } else {
+        const ok = await login({ email, password });
+        if (ok) {
+          toast.success('Welcome back! 👋');
+          router.push('/');
+        }
+      }
+    } catch (err: any) {
+      let msg = err?.message || 'Something went wrong';
+      
+      // If the backend sent a 422 Unprocessable Entity, extract the validation detail
+      if (err?.data?.detail && Array.isArray(err.data.detail)) {
+        msg = err.data.detail.map((d: any) => `${d.loc?.[d.loc.length-1]}: ${d.msg}`).join(', ');
+      }
+
+      setError(msg);
+      toast.error(isRegister ? 'Registration failed' : 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fillDemo = () => {
+    setIsRegister(false);
     setEmail('demo@finance.app');
     setPassword('demo1234');
   };
@@ -62,10 +105,46 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-bg-card border border-white/[0.08] rounded-2xl p-6 shadow-[0_24px_60px_rgba(0,0,0,0.5)]">
-          <h2 className="text-lg font-bold text-txt-primary mb-1">Sign in</h2>
-          <p className="text-xs text-txt-muted mb-5">Enter your credentials to continue</p>
+          <div className="flex justify-between items-end mb-5">
+            <div>
+              <h2 className="text-lg font-bold text-txt-primary mb-1">
+                {isRegister ? 'Create Account' : 'Sign In'}
+              </h2>
+              <p className="text-xs text-txt-muted">
+                {isRegister ? 'Sign up to get started' : 'Enter your credentials to continue'}
+              </p>
+            </div>
+            <button 
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setError('');
+              }}
+              className="text-xs font-semibold text-accent-light hover:text-accent transition-colors"
+            >
+              {isRegister ? 'Log in instead' : 'Create account'}
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* Name (Register only) */}
+            {isRegister && (
+              <div>
+                <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">Name</label>
+                <div className="relative">
+                  <UserIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted" />
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    required
+                    className="w-full pl-9 pr-4 py-2.5 bg-white/[0.04] border border-white/[0.09] rounded-xl text-sm text-txt-primary placeholder:text-txt-muted outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">Email</label>
@@ -90,7 +169,7 @@ export default function LoginPage() {
                 <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-txt-muted" />
                 <input
                   type={showPw ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  autoComplete={isRegister ? "new-password" : "current-password"}
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -127,22 +206,26 @@ export default function LoginPage() {
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <>Sign In <ArrowRight size={15} /></>
+                <>
+                  {isRegister ? 'Create Account' : 'Sign In'} <ArrowRight size={15} />
+                </>
               )}
             </button>
           </form>
         </div>
 
         {/* Demo hint */}
-        <div className="mt-4 p-3.5 bg-accent/8 border border-accent/20 rounded-xl text-center">
-          <p className="text-xs text-txt-muted mb-2">🚀 Try the demo account</p>
-          <button
-            onClick={fillDemo}
-            className="text-xs font-semibold text-accent-light hover:text-accent transition-colors cursor-pointer underline underline-offset-2"
-          >
-            demo@finance.app / demo1234
-          </button>
-        </div>
+        {!isRegister && (
+          <div className="mt-4 p-3.5 bg-accent/8 border border-accent/20 rounded-xl text-center">
+            <p className="text-xs text-txt-muted mb-2">🚀 Try the demo account</p>
+            <button
+              onClick={fillDemo}
+              className="text-xs font-semibold text-accent-light hover:text-accent transition-colors cursor-pointer underline underline-offset-2"
+            >
+              demo@finance.app / demo1234
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   );

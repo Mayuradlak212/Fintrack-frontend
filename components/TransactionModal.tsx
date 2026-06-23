@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { X, Upload, FileText, ImageIcon, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, Upload, FileText, ImageIcon, Trash2, TrendingUp, TrendingDown, MapPin, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import {
   TransactionForm,
@@ -48,11 +48,15 @@ const emptyForm = (): z.infer<typeof ModalFormSchema> => ({
   receiptBase64: undefined,
   receiptName: undefined,
   receiptMimeType: undefined,
+  latitude: undefined,
+  longitude: undefined,
+  location_text: undefined,
 });
 
 export default function TransactionModal({ open, onClose, onSave, initial }: TransactionModalProps) {
   const [form, setForm] = useState(emptyForm());
   const [errors, setErrors] = useState<ModalErrors>({});
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     if (initial) {
@@ -65,12 +69,50 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
         receiptBase64: initial.receiptBase64,
         receiptName: initial.receiptName,
         receiptMimeType: initial.receiptMimeType,
+        latitude: initial.latitude,
+        longitude: initial.longitude,
+        location_text: initial.location_text,
       });
     } else {
       setForm(emptyForm());
     }
     setErrors({});
   }, [initial, open]);
+
+  // Request Geolocation when adding a new transaction
+  useEffect(() => {
+    if (open && !initial && !form.location_text && !isLocating) {
+      if ('geolocation' in navigator) {
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
+
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`);
+              const data = await res.json();
+              if (data?.address) {
+                const city = data.address.city || data.address.town || data.address.county || data.address.state;
+                if (city) {
+                  setForm((f) => ({ ...f, location_text: city }));
+                }
+              }
+            } catch (err) {
+              console.error('Failed to reverse geocode', err);
+            } finally {
+              setIsLocating(false);
+            }
+          },
+          (err) => {
+            console.error('Geolocation error:', err);
+            setIsLocating(false);
+          }
+        );
+      }
+    }
+  }, [open, initial, form.location_text, isLocating]);
 
   const onDrop = useCallback((accepted: File[]) => {
     const file = accepted[0];
@@ -115,6 +157,9 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
       receiptBase64:   v.receiptBase64,
       receiptName:     v.receiptName,
       receiptMimeType: v.receiptMimeType,
+      latitude:        v.latitude,
+      longitude:       v.longitude,
+      location_text:   v.location_text,
     };
     onSave(payload);
     onClose();
@@ -190,7 +235,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
               {/* Amount */}
               <div>
                 <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                  Amount ($)
+                  Amount (₹)
                 </label>
                 <input
                   type="number"
@@ -258,12 +303,31 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                 </div>
               </div>
 
-              {/* Receipt Upload */}
-              <div>
-                <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                  Receipt (optional)
-                </label>
-                {form.receiptBase64 ? (
+              {/* Receipt Upload & Location */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
+                    Location
+                  </label>
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/[0.09] bg-white/[0.03]">
+                    <MapPin size={16} className="text-accent shrink-0" />
+                    {isLocating ? (
+                      <div className="flex items-center gap-2 text-xs text-txt-muted">
+                        <Loader2 size={12} className="animate-spin" /> Locating...
+                      </div>
+                    ) : form.location_text ? (
+                      <span className="text-xs text-txt-secondary truncate flex-1">{form.location_text}</span>
+                    ) : (
+                      <span className="text-xs text-txt-muted flex-1 italic">Unknown</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
+                    Receipt (optional)
+                  </label>
+                  {form.receiptBase64 ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.09] bg-white/[0.03]">
                     {form.receiptMimeType === 'application/pdf'
                       ? <FileText size={18} className="text-accent-light shrink-0" />
@@ -301,6 +365,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                     </p>
                   </div>
                 )}
+                </div>
               </div>
 
               {/* Actions */}

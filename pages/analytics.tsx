@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
 
   const maxMonthly = Math.max(...monthlyData.flatMap(([, d]) => [d.credit, d.debit]), 1);
   const maxCat = categoryTotals[0]?.[1] || 1;
-  const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+  const fmt = (n: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
   if (!user) return null;
 

@@ -2,13 +2,14 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, X, Wallet } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, X, Wallet, User as UserIcon, Receipt, PieChart, Settings, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
+  { href: '/profile', label: 'Profile', icon: UserIcon },
 ];
 
 interface SidebarProps {
@@ -67,19 +68,6 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               </button>
             </div>
 
-            {/* User card */}
-            {user && (
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.07] mb-6">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-pink-600 flex items-center justify-center text-white text-base font-bold shrink-0">
-                  {user.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-txt-primary truncate">{user.name}</p>
-                  <p className="text-xs text-txt-muted truncate">{user.email}</p>
-                </div>
-              </div>
-            )}
-
             {/* Nav links */}
             <nav className="flex-1 flex flex-col gap-1.5">
               {navItems.map(({ href, label, icon: Icon }, i) => {
@@ -104,6 +92,25 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 );
               })}
             </nav>
+
+            {/* Bottom Profile Area */}
+            {user && (
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.07] mt-auto mb-2">
+                <Link href="/profile">
+                  <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer overflow-hidden shrink-0">
+                    {user.avatar_base64 ? (
+                      <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <UserIcon className="w-5 h-5 text-accent" />
+                    )}
+                  </div>
+                </Link>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-txt-primary truncate">{user.name}</p>
+                  <p className="text-xs text-txt-muted truncate">{user.email}</p>
+                </div>
+              </div>
+            )}
 
             {/* Logout */}
             <button

@@ -39,7 +39,7 @@ export default function SummaryCard({ title, amount, icon: Icon, color, delay = 
   const c = colorMap[color];
   const formatted = new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     minimumFractionDigits: 2,
   }).format(amount);
 

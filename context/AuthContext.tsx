@@ -1,26 +1,36 @@
 'use client';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { AuthContextType, User } from '../types';
+import { AuthContextType, User, LoginForm, RegisterForm } from '../types';
+import { fetchApi, setToken, removeToken } from '../lib/api';
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-// Mock users — swap for real API later
-const MOCK_USERS = [
-  { email: 'demo@finance.app', password: 'demo1234', name: 'Demo User' },
-  { email: 'admin@finance.app', password: 'admin1234', name: 'Admin' },
-];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ── Restore session from localStorage (called once on mount) ─────────────
-  const restoreSession = useCallback(() => {
+  const updateProfile = useCallback(async (data: Partial<User>): Promise<boolean> => {
     try {
-      const stored = localStorage.getItem('ft_user');
-      if (stored) setUser(JSON.parse(stored));
+      const res = await fetchApi('/api/auth/me', {
+        method: 'PATCH',
+        data,
+      });
+      setUser(res);
+      return true;
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // ── Restore session from API (called once on mount) ──────────────────────
+  const restoreSession = useCallback(async () => {
+    try {
+      const data = await fetchApi('/api/auth/me');
+      setUser({ email: data.email, name: data.name });
     } catch {
-      // corrupted storage — start fresh
+      // Token invalid or network error
+      removeToken();
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -31,26 +41,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [restoreSession]);
 
   // ── Auth actions ─────────────────────────────────────────────────────────
-  const login = useCallback((email: string, password: string): boolean => {
-    const found = MOCK_USERS.find(
-      u => u.email === email && u.password === password
-    );
-    if (found) {
-      const u: User = { email: found.email, name: found.name };
-      setUser(u);
-      localStorage.setItem('ft_user', JSON.stringify(u));
+  const login = useCallback(async (data: LoginForm): Promise<boolean> => {
+    try {
+      const res = await fetchApi('/api/auth/login', {
+        method: 'POST',
+        data,
+      });
+      setToken(res.access_token);
+      setUser({ email: res.user.email, name: res.user.name });
       return true;
+    } catch (err) {
+      throw err;
     }
-    return false;
+  }, []);
+
+  const register = useCallback(async (data: RegisterForm): Promise<boolean> => {
+    try {
+      const res = await fetchApi('/api/auth/register', {
+        method: 'POST',
+        data,
+      });
+      setToken(res.access_token);
+      setUser({ email: res.user.email, name: res.user.name });
+      return true;
+    } catch (err) {
+      throw err;
+    }
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem('ft_user');
+    removeToken();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, register, updateProfile, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
@@ -61,3 +86,4 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be inside AuthProvider');
   return ctx;
 }
+

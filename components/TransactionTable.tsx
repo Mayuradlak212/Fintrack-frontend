@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Trash2, Paperclip, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Pencil, Trash2, Paperclip, TrendingUp, TrendingDown, ChevronUp, ChevronDown, MapPin } from 'lucide-react';
 import { Transaction } from '../types';
 import ConfirmDialog from './ConfirmDialog';
 import ReceiptViewer from './ReceiptViewer';
@@ -77,7 +77,7 @@ export default function TransactionTable({ transactions, onEdit, onDelete }: Tra
             <AnimatePresence mode="popLayout">
               {sorted.map((tx, i) => {
                 const isCredit = tx.type === 'credit';
-                const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'USD' }).format(tx.amount);
+                const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
                 const date = formatISTDateTime(tx.date);
 
                 return (
@@ -109,7 +109,16 @@ export default function TransactionTable({ transactions, onEdit, onDelete }: Tra
                     </td>
 
                     {/* Date */}
-                    <td className={tdCls}>{date}</td>
+                    <td className={`${tdCls} text-txt-muted whitespace-nowrap`}>
+                      <div className="flex flex-col gap-0.5">
+                        <span>{date}</span>
+                        {tx.location_text && (
+                          <span className="text-[10px] flex items-center gap-1 opacity-70">
+                            <MapPin size={9} /> {tx.location_text}
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
                     {/* Category */}
                     <td className={tdCls}>

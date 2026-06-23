@@ -1,0 +1,172 @@
+import React, { useState, useRef, useEffect } from 'react';
+import Layout from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
+import { Camera, Save, User as UserIcon, Loader2 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { motion } from 'framer-motion';
+import Head from 'next/head';
+
+export default function ProfilePage() {
+  const { user, updateProfile } = useAuth();
+  
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+  const [avatarMimeType, setAvatarMimeType] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+      setAvatarBase64(user.avatar_base64 || null);
+      setAvatarMimeType(user.avatar_mime_type || null);
+    }
+  }, [user]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Str = (reader.result as string).split(',')[1];
+      setAvatarBase64(base64Str);
+      setAvatarMimeType(file.type);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error('Name cannot be empty');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        name,
+        avatar_base64: avatarBase64,
+        avatar_mime_type: avatarMimeType,
+      });
+      toast.success('Profile updated successfully!');
+    } catch (err) {
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!user) return null;
+
+  const avatarSrc = avatarBase64 ? `data:${avatarMimeType};base64,${avatarBase64}` : null;
+
+  return (
+    <Layout>
+      <Head>
+        <title>Profile | FinTrack</title>
+      </Head>
+
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-txt-primary">Your Profile</h1>
+          <p className="text-txt-muted mt-1">Manage your personal information and avatar.</p>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card rounded-3xl p-8 border border-white/[0.05]"
+        >
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Avatar Upload */}
+            <div className="flex flex-col items-center sm:flex-row sm:items-start gap-8">
+              <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="w-32 h-32 rounded-full overflow-hidden bg-bg-secondary border-2 border-white/[0.05] flex items-center justify-center relative">
+                  {avatarSrc ? (
+                    <img src={avatarSrc} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className="w-12 h-12 text-txt-muted" />
+                  )}
+                  
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                    <Camera className="w-6 h-6 text-white" />
+                    <span className="text-xs font-medium text-white">Change</span>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                />
+              </div>
+
+              <div className="flex-1 space-y-5 w-full">
+                <div>
+                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
+                    Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.09] rounded-xl px-4 py-3 text-sm text-txt-primary outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
+                    Email Address <span className="lowercase text-txt-muted/50">(read-only)</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    disabled
+                    className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 text-sm text-txt-muted cursor-not-allowed outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.05] flex justify-end">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="btn-primary"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </Layout>
+  );
+}

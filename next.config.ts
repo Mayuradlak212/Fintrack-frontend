@@ -9,6 +9,14 @@ const withPWA = require('next-pwa')({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   turbopack: {}, // silence the webpack/turbopack conflict from next-pwa
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000'}/api/:path*`,
+      },
+    ];
+  },
 };
 
 module.exports = withPWA(nextConfig);

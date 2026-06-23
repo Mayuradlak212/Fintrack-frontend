@@ -88,7 +88,7 @@ export default function DashboardPage() {
           ) : (
             recent.map((tx, i) => {
               const isCredit = tx.type === 'credit';
-              const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(tx.amount);
+              const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
               const date = formatISTDate(tx.date);
               return (
                 <motion.div

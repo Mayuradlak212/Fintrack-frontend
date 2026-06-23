@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, Wallet } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, Wallet, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
@@ -70,13 +70,19 @@ export default function Navbar({ onHamburger }: NavbarProps) {
         {/* Right: avatar + logout */}
         <div className="flex items-center gap-2 sm:gap-3">
           {user && (
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-pink-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {user.name.charAt(0).toUpperCase()}
+            <div className="flex items-center gap-3 pl-4 border-l border-white/[0.05]">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-txt-primary">{user.name}</p>
               </div>
-              <span className="text-xs text-txt-secondary max-w-[100px] truncate hidden xl:block">
-                {user.name}
-              </span>
+              <Link href="/profile">
+                <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer overflow-hidden">
+                  {user.avatar_base64 ? (
+                    <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-4 h-4 text-accent" />
+                  )}
+                </div>
+              </Link>
             </div>
           )}
           <button
