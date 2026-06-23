@@ -5,6 +5,7 @@ import { X, Upload, FileText, ImageIcon, Trash2, TrendingUp, TrendingDown } from
 import { z } from 'zod';
 import {
   TransactionForm,
+  TransactionFormSchema,
   Transaction,
   CategorySchema,
 } from '../types';
@@ -12,18 +13,24 @@ import { toISO } from '../lib/dateUtils';
 
 const CATEGORIES = CategorySchema.options;
 
-// ── Explicit modal form schema (date stored as YYYY-MM-DD string from <input type="date">) ──
-const ModalFormSchema = z.object({
-  type: z.enum(['credit', 'debit']),
-  amount: z.number({ invalid_type_error: 'Enter a valid amount' }).positive('Amount must be greater than 0'),
-  description: z.string().min(1, 'Description is required').max(200, 'Too long'),
-  category: CategorySchema,
+// ── Modal form schema: uses same CategorySchema + TransactionTypeSchema as TransactionForm ──
+const ModalFormSchema = TransactionFormSchema.extend({
+  // Override date to accept YYYY-MM-DD from <input type="date"> instead of full ISO
   date: z.string().min(1, 'Date is required'),
-  receiptBase64: z.string().optional(),
-  receiptName: z.string().optional(),
-  receiptMimeType: z.string().optional(),
 });
 type ModalErrors = Partial<Record<keyof z.infer<typeof ModalFormSchema>, string>>;
+
+/** Safely maps Zod field errors to ModalErrors — filters non-string paths */
+function parseZodErrors(error: z.ZodError): ModalErrors {
+  const out: ModalErrors = {};
+  for (const issue of error.issues) {
+    const key = issue.path[0];
+    if (typeof key === 'string' && key in ({} as z.infer<typeof ModalFormSchema>)) {
+      out[key as keyof ModalErrors] = issue.message;
+    }
+  }
+  return out;
+}
 
 interface TransactionModalProps {
   open: boolean;
@@ -87,29 +94,31 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
     maxSize: 5 * 1024 * 1024,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
     // ── Zod runtime validation ──
     const result = ModalFormSchema.safeParse(form);
     if (!result.success) {
-      const fieldErrors: ModalErrors = {};
-      result.error.errors.forEach(err => {
-        const field = err.path[0] as keyof ModalErrors;
-        if (field) fieldErrors[field] = err.message;
-      });
-      setErrors(fieldErrors);
+      setErrors(parseZodErrors(result.error));
       return;
     }
 
-    // Coerce date string → ISO datetime for storage
-    const validated = result.data;
-    onSave({
-      ...validated,
-      date: toISO(validated.date),
-    });
+    // Build a fully-typed TransactionForm payload
+    const v = result.data;
+    const payload: TransactionForm = {
+      type:            v.type,
+      amount:          v.amount,
+      description:     v.description,
+      category:        v.category,
+      date:            toISO(v.date),
+      receiptBase64:   v.receiptBase64,
+      receiptName:     v.receiptName,
+      receiptMimeType: v.receiptMimeType,
+    };
+    onSave(payload);
     onClose();
-  };
+  }, [form, onSave, onClose]);
 
   const inputCls = (field: keyof ModalErrors) =>
     `w-full bg-white/[0.04] border rounded-xl px-4 py-2.5 text-sm text-txt-primary placeholder:text-txt-muted outline-none transition-all

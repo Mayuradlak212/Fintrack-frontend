@@ -3,12 +3,14 @@ const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: true, // disabled in dev; enable in production build
+  disable: process.env.NODE_ENV === 'development',
 });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  turbopack: {},
+  turbopack: {}, // silence the webpack/turbopack conflict from next-pwa
 };
 
 module.exports = withPWA(nextConfig);
+
+
