@@ -56,6 +56,7 @@ export const UserSchema = z.object({
   name: z.string().min(1),
   avatar_base64: z.string().optional(),
   avatar_mime_type: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 // ─── Login/Register form ──────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ export default function ProfilePage() {
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [avatarBase64, setAvatarBase64] = useState<string | undefined>(undefined);
   const [avatarMimeType, setAvatarMimeType] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
@@ -21,6 +22,7 @@ export default function ProfilePage() {
     if (user) {
       setName(user.name);
       setEmail(user.email);
+      setPhone(user.phone || '');
       setAvatarBase64(user.avatar_base64 || undefined);
       setAvatarMimeType(user.avatar_mime_type || undefined);
     }
@@ -60,6 +62,7 @@ export default function ProfilePage() {
     try {
       await updateProfile({
         name,
+        phone: phone.trim() || undefined,
         avatar_base64: avatarBase64,
         avatar_mime_type: avatarMimeType,
       });
@@ -142,6 +145,19 @@ export default function ProfilePage() {
                     className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 text-sm text-txt-muted cursor-not-allowed outline-none"
                   />
                 </div>
+
+                <div>
+                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className="w-full bg-white/[0.04] border border-white/[0.09] rounded-xl px-4 py-3 text-sm text-txt-primary outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
+                  />
+                </div>
               </div>
             </div>
 
@@ -149,17 +165,17 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="btn-primary"
+                className="flex items-center justify-center px-6 py-2.5 rounded-xl text-sm font-semibold text-accent-light border border-accent hover:bg-accent/10 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed gap-2"
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                    <Save className="w-4 h-4" />
+                    <span>Save Changes</span>
                   </>
                 )}
               </button>
