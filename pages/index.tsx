@@ -28,8 +28,8 @@ export default function DashboardPage() {
   const balance = totalCredit - totalDebit;
   const recent = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
-  const handleAdd = (tx: TransactionForm) => {
-    addTransaction(tx);
+  const handleAdd = async (tx: TransactionForm) => {
+    await addTransaction(tx);
     toast.success('Transaction added!');
   };
 

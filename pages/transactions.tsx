@@ -39,12 +39,12 @@ export default function TransactionsPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, filter, search]);
 
-  const handleSave = (tx: TransactionForm) => {
+  const handleSave = async (tx: TransactionForm) => {
     if (editTx) {
-      updateTransaction(editTx.id, tx);
+      await updateTransaction(editTx.id, tx);
       toast.success('Transaction updated!');
     } else {
-      addTransaction(tx);
+      await addTransaction(tx);
       toast.success('Transaction added!');
     }
     setEditTx(null);

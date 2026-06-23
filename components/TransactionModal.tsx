@@ -35,7 +35,7 @@ function parseZodErrors(error: z.ZodError): ModalErrors {
 interface TransactionModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (tx: TransactionForm) => void;
+  onSave: (tx: TransactionForm) => Promise<void> | void;
   initial?: Transaction | null;
 }
 
@@ -57,6 +57,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
   const [form, setForm] = useState(emptyForm());
   const [errors, setErrors] = useState<ModalErrors>({});
   const [isLocating, setIsLocating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (initial) {
@@ -136,7 +137,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
     maxSize: 5 * 1024 * 1024,
   });
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     // ── Zod runtime validation ──
@@ -161,8 +162,16 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
       longitude:       v.longitude,
       location_text:   v.location_text,
     };
-    onSave(payload);
-    onClose();
+    
+    try {
+      setIsSaving(true);
+      await onSave(payload);
+      onClose();
+    } catch (err) {
+      toast.error('Failed to save transaction');
+    } finally {
+      setIsSaving(false);
+    }
   }, [form, onSave, onClose]);
 
   const inputCls = (field: keyof ModalErrors) =>
@@ -379,8 +388,10 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-accent to-accent-light shadow-[0_4px_16px_rgba(124,58,237,0.4)] hover:shadow-[0_6px_22px_rgba(124,58,237,0.5)] transition-all cursor-pointer"
+                  disabled={isSaving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-accent to-accent-light shadow-[0_4px_16px_rgba(124,58,237,0.4)] hover:shadow-[0_6px_22px_rgba(124,58,237,0.5)] disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
+                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
                   {initial ? 'Save Changes' : 'Add Transaction'}
                 </button>
               </div>
