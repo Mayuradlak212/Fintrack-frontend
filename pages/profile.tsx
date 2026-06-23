@@ -11,8 +11,8 @@ export default function ProfilePage() {
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
-  const [avatarMimeType, setAvatarMimeType] = useState<string | null>(null);
+  const [avatarBase64, setAvatarBase64] = useState<string | undefined>(undefined);
+  const [avatarMimeType, setAvatarMimeType] = useState<string | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,8 +21,8 @@ export default function ProfilePage() {
     if (user) {
       setName(user.name);
       setEmail(user.email);
-      setAvatarBase64(user.avatar_base64 || null);
-      setAvatarMimeType(user.avatar_mime_type || null);
+      setAvatarBase64(user.avatar_base64 || undefined);
+      setAvatarMimeType(user.avatar_mime_type || undefined);
     }
   }, [user]);
 

@@ -55,7 +55,18 @@ export async function fetchApi<T = any>(endpoint: string, options: FetchOptions 
     config.body = JSON.stringify(data);
   }
 
-  const response = await fetch(endpoint, config);
+  // Use the NEXT_PUBLIC_API_URL environment variable based on environment
+  const appEnv = process.env.NEXT_PUBLIC_APP_ENV || 'local';
+  let baseUrl = '';
+  if (appEnv === 'prod') {
+    baseUrl = process.env.NEXT_PUBLIC_API_URL_PROD || '';
+  } else {
+    baseUrl = process.env.NEXT_PUBLIC_API_URL_LOCAL || 'http://127.0.0.1:5000';
+  }
+
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
+
+  const response = await fetch(url, config);
 
   if (response.status === 401) {
     // Unauthorized: token might be expired. Handle it gracefully by clearing token.
