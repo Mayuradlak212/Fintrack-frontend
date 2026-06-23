@@ -93,12 +93,21 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
             setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
 
             try {
-              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`);
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`);
               const data = await res.json();
               if (data?.address) {
+                const local = data.address.suburb || data.address.neighbourhood || data.address.road || data.address.residential;
                 const city = data.address.city || data.address.town || data.address.county || data.address.state;
-                if (city) {
-                  setForm((f) => ({ ...f, location_text: city }));
+                
+                let detailedLocation = city;
+                if (local && city && local !== city) {
+                  detailedLocation = `${local}, ${city}`;
+                } else if (local) {
+                  detailedLocation = local;
+                }
+                
+                if (detailedLocation) {
+                  setForm((f) => ({ ...f, location_text: detailedLocation }));
                 }
               }
             } catch (err) {
