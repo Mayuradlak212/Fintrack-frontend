@@ -72,11 +72,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillDemo = () => {
-    setIsRegister(false);
-    setEmail('demo@finance.app');
-    setPassword('demo1234');
-  };
 
   return (
     <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4 relative overflow-hidden">
@@ -214,18 +209,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Demo hint */}
-        {!isRegister && (
-          <div className="mt-4 p-3.5 bg-accent/8 border border-accent/20 rounded-xl text-center">
-            <p className="text-xs text-txt-muted mb-2">🚀 Try the demo account</p>
-            <button
-              onClick={fillDemo}
-              className="text-xs font-semibold text-accent-light hover:text-accent transition-colors cursor-pointer underline underline-offset-2"
-            >
-              demo@finance.app / demo1234
-            </button>
-          </div>
-        )}
       </motion.div>
     </div>
   );
