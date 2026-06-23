@@ -1,26 +1,60 @@
+/* ── All @imports FIRST ── */
 @import "tailwindcss";
+@import "react-toastify/dist/ReactToastify.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans: 'Inter', sans-serif;
+
+  --color-bg-primary:    #07070f;
+  --color-bg-surface:    #0f0f1a;
+  --color-bg-card:       #13131f;
+  --color-bg-card-hover: #1a1a2e;
+
+  --color-accent:        #7c3aed;
+  --color-accent-light:  #a855f7;
+
+  --color-credit:        #10b981;
+  --color-credit-light:  #34d399;
+
+  --color-debit:         #ef4444;
+  --color-debit-light:   #f87171;
+
+  --color-txt-primary:   #f1f5f9;
+  --color-txt-secondary: #94a3b8;
+  --color-txt-muted:     #475569;
+
+  --color-border:        rgba(255,255,255,0.07);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  font-family: 'Inter', sans-serif;
+  background-color: #07070f;
+  color: #f1f5f9;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Scrollbar ── */
+::-webkit-scrollbar            { width: 4px; height: 4px; }
+::-webkit-scrollbar-track      { background: #0f0f1a; }
+::-webkit-scrollbar-thumb      { background: #7c3aed; border-radius: 999px; }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── React-Toastify dark skin ── */
+.Toastify__toast {
+  background: #1a1a2e !important;
+  border: 1px solid rgba(255,255,255,0.09) !important;
+  border-radius: 14px !important;
+  color: #f1f5f9 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5) !important;
 }
+.Toastify__toast--success { border-color: rgba(16,185,129,0.35) !important; }
+.Toastify__toast--error   { border-color: rgba(239,68,68,0.35)  !important; }
+.Toastify__toast--warning { border-color: rgba(245,158,11,0.35) !important; }
+.Toastify__progress-bar--success { background: #10b981 !important; }
+.Toastify__progress-bar--error   { background: #ef4444 !important; }
+.Toastify__close-button          { color: #94a3b8  !important; }
