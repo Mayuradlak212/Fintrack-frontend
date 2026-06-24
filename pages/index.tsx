@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, TrendingUp, TrendingDown, ArrowUpRight, Plus, ArrowRight } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, ArrowUpRight, Plus, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Layout from '../components/Layout';
 import SummaryCard from '../components/SummaryCard';
@@ -13,7 +13,7 @@ import { useRouter } from 'next/router';
 import { formatISTDate } from '../lib/dateUtils';
 
 export default function DashboardPage() {
-  const { transactions, addTransaction } = useTransactions();
+  const { transactions, addTransaction, isLoading: txLoading } = useTransactions();
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -74,7 +74,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="divide-y divide-white/[0.04]">
-          {recent.length === 0 ? (
+          {txLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="w-8 h-8 text-accent animate-spin" />
+              <p className="text-sm text-txt-muted">Loading transactions...</p>
+            </div>
+          ) : recent.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-2">
               <span className="text-4xl">💸</span>
               <p className="text-sm text-txt-muted">No transactions yet</p>

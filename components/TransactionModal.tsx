@@ -40,12 +40,18 @@ interface TransactionModalProps {
   initial?: Transaction | null;
 }
 
+const getLocalDatetimeString = (dateObj: Date) => {
+  if (isNaN(dateObj.getTime())) dateObj = new Date();
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+};
+
 const emptyForm = (): z.infer<typeof ModalFormSchema> => ({
-  type: 'credit',
+  type: 'debit',
   amount: 0,
   description: '',
   category: 'Other',
-  date: new Date().toISOString().slice(0, 10),
+  date: getLocalDatetimeString(new Date()),
   receiptBase64: undefined,
   receiptName: undefined,
   receiptMimeType: undefined,
@@ -62,12 +68,20 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
 
   useEffect(() => {
     if (initial) {
+      let formattedDate = getLocalDatetimeString(new Date());
+      try {
+        const parsed = new Date(initial.date);
+        if (!isNaN(parsed.getTime())) {
+          formattedDate = getLocalDatetimeString(parsed);
+        }
+      } catch(e) {}
+
       setForm({
         type: initial.type,
         amount: initial.amount,
         description: initial.description,
         category: initial.category,
-        date: initial.date.slice(0, 10),
+        date: formattedDate,
         receiptBase64: initial.receiptBase64,
         receiptName: initial.receiptName,
         receiptMimeType: initial.receiptMimeType,
@@ -81,9 +95,9 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
     setErrors({});
   }, [initial, open]);
 
-  // Request Geolocation when adding a new transaction
+  // Request Geolocation if no location text exists
   useEffect(() => {
-    if (open && !initial && !form.location_text && !isLocating) {
+    if (open && !form.location_text && !isLocating) {
       if ('geolocation' in navigator) {
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition(
@@ -119,7 +133,8 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
           (err) => {
             console.error('Geolocation error:', err);
             setIsLocating(false);
-          }
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
       }
     }
@@ -308,10 +323,10 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                 </div>
                 <div>
                   <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                    Date
+                    Date & Time
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={form.date}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                     className={`w-full bg-white/[0.04] border rounded-xl px-3 py-2.5 text-sm text-txt-primary outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all ${errors.date ? 'border-red-500/60' : 'border-white/[0.09]'}`}

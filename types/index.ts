@@ -101,4 +101,5 @@ export interface TransactionContextType {
   addTransaction: (tx: TransactionForm) => void;
   updateTransaction: (id: string, tx: TransactionForm) => void;
   deleteTransaction: (id: string) => void;
+  isLoading: boolean;
 }

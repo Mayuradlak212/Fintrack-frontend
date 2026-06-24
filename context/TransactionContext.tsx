@@ -8,15 +8,18 @@ const TransactionContext = createContext<TransactionContextType | null>(null);
 
 export function TransactionProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
   // ── Fetch from API (runs when user logs in) ──────────────────────────────
   const fetchTransactions = useCallback(async () => {
     if (!user) {
       setTransactions([]);
+      setIsLoading(false);
       return;
     }
     try {
+      setIsLoading(true);
       const data = await fetchApi('/api/transactions?per_page=100'); // increase limit as needed
       // Map API response fields from backend snake_case to frontend if needed
       // Our API sends both (using model_validate), but we use the frontend names here.
@@ -32,6 +35,8 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
       setTransactions(mapped);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
+    } finally {
+      setIsLoading(false);
     }
   }, [user]);
 
@@ -113,7 +118,7 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
 
   return (
     <TransactionContext.Provider
-      value={{ transactions, addTransaction, updateTransaction, deleteTransaction }}
+      value={{ transactions, addTransaction, updateTransaction, deleteTransaction, isLoading }}
     >
       {children}
     </TransactionContext.Provider>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, LayoutGrid, List, Search, Filter } from 'lucide-react';
+import { Plus, LayoutGrid, List, Search, Filter, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import TransactionCard from '../components/TransactionCard';
@@ -14,7 +14,7 @@ import { toast } from 'react-toastify';
 type FilterType = 'all' | 'credit' | 'debit';
 
 export default function TransactionsPage() {
-  const { transactions, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
+  const { transactions, addTransaction, updateTransaction, deleteTransaction, isLoading: txLoading } = useTransactions();
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -133,7 +133,19 @@ export default function TransactionsPage() {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {view === 'card' ? (
+        {txLoading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col items-center justify-center py-32 gap-3"
+          >
+            <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            <p className="text-sm text-txt-muted">Fetching your transactions...</p>
+          </motion.div>
+        ) : view === 'card' ? (
           <motion.div
             key="cards"
             initial={{ opacity: 0, y: 10 }}

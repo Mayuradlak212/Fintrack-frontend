@@ -22,9 +22,23 @@ export const setToken = (token: string) => {
   }
 };
 
+export const getRefreshToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('ft_refresh_token');
+  }
+  return null;
+};
+
+export const setRefreshToken = (token: string) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('ft_refresh_token', token);
+  }
+};
+
 export const removeToken = () => {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('ft_token');
+    localStorage.removeItem('ft_refresh_token');
   }
 };
 
@@ -66,13 +80,40 @@ export async function fetchApi<T = any>(endpoint: string, options: FetchOptions 
 
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
 
-  const response = await fetch(url, config);
+  let response = await fetch(url, config);
 
-  if (response.status === 401) {
-    // Unauthorized: token might be expired. Handle it gracefully by clearing token.
-    removeToken();
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth/')) {
-      window.location.href = '/auth/login';
+  if (response.status === 401 && endpoint !== '/api/auth/refresh' && endpoint !== '/api/auth/login') {
+    // Try to refresh the token
+    const refreshToken = getRefreshToken();
+    let refreshed = false;
+    
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${baseUrl}/api/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${refreshToken}` }
+        });
+        
+        if (refreshRes.ok) {
+          const refreshData = await refreshRes.json();
+          setToken(refreshData.access_token);
+          // Retry original request with new token
+          headers.set('Authorization', `Bearer ${refreshData.access_token}`);
+          config.headers = headers;
+          response = await fetch(url, config);
+          refreshed = true;
+        }
+      } catch (err) {
+        // ignore and let it fall through to logout
+      }
+    }
+    
+    if (!refreshed) {
+      // Unauthorized: token expired and refresh failed.
+      removeToken();
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth/')) {
+        window.location.href = '/auth/login';
+      }
     }
   }
 

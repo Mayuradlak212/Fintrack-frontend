@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const restoreSession = useCallback(async () => {
     try {
       const data = await fetchApi('/api/auth/me');
-      setUser({ email: data.email, name: data.name });
+      setUser(data);
     } catch {
       // Token invalid or network error
       removeToken();
@@ -48,7 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data,
       });
       setToken(res.access_token);
-      setUser({ email: res.user.email, name: res.user.name });
+      import('../lib/api').then(api => api.setRefreshToken(res.refresh_token));
+      setUser(res.user);
       return true;
     } catch (err) {
       throw err;
@@ -62,7 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data,
       });
       setToken(res.access_token);
-      setUser({ email: res.user.email, name: res.user.name });
+      import('../lib/api').then(api => api.setRefreshToken(res.refresh_token));
+      setUser(res.user);
       return true;
     } catch (err) {
       throw err;
