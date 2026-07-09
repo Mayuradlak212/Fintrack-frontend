@@ -149,23 +149,24 @@ export default function TransactionsPage() {
   );
 
   // ── Fetch summary stats based on current date range & filter ──────────────
-  useEffect(() => {
+  const fetchSummary = useCallback(async () => {
     if (!user) return;
-    const fetchSummary = async () => {
-      try {
-        const queryParams = new URLSearchParams();
-        if (filter !== 'all') queryParams.set('type', filter);
-        if (debouncedDateRange.from) queryParams.set('date_from', debouncedDateRange.from);
-        if (debouncedDateRange.to) queryParams.set('date_to', debouncedDateRange.to);
+    try {
+      const queryParams = new URLSearchParams();
+      if (filter !== 'all') queryParams.set('type', filter);
+      if (debouncedDateRange.from) queryParams.set('date_from', debouncedDateRange.from);
+      if (debouncedDateRange.to) queryParams.set('date_to', debouncedDateRange.to);
 
-        const data = await fetchApi(`/api/transactions/summary?${queryParams.toString()}`);
-        setSummary(data);
-      } catch (err) {
-        console.error('Failed to fetch summary:', err);
-      }
-    };
-    fetchSummary();
+      const data = await fetchApi(`/api/transactions/summary?${queryParams.toString()}`);
+      setSummary(data);
+    } catch (err) {
+      console.error('Failed to fetch summary:', err);
+    }
   }, [user, filter, debouncedDateRange]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
   // ── Reset when filters / view changes ──────────────────────────────────────
   useEffect(() => {
@@ -207,11 +208,23 @@ export default function TransactionsPage() {
     // Refresh current page and summary after change
     const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
     fetchPage(buildParams(currentPage, perPage));
+    fetchSummary();
     setEditTx(null);
   };
 
   const handleEdit   = (tx: Transaction) => { setEditTx(tx); setModalOpen(true); };
-  const handleDelete = (id: string) => { deleteTransaction(id); toast.error('Transaction deleted'); };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+      toast.error('Transaction deleted');
+      const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
+      fetchPage(buildParams(currentPage, perPage));
+      fetchSummary();
+    } catch (err) {
+      toast.error('Failed to delete transaction');
+    }
+  };
 
   // ── Export ────────────────────────────────────────────────────────────────
   const handleExport = () => {
