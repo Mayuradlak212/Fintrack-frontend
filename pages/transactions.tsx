@@ -284,30 +284,30 @@ export default function TransactionsPage() {
       </div>
 
       {/* ── Summary Stats ────────────────────────────────────────────────── */}
-      <div className="flex flex-row gap-3 sm:gap-4 mb-6 overflow-x-auto w-full">
+      <div className="flex flex-row gap-2.5 sm:gap-4 mb-4 overflow-x-auto w-full">
         {/* Total Credit */}
-        <div className="flex-1 min-w-[120px] bg-bg-card border border-white/[0.07] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-          <p className="text-[10px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Credit</p>
-          <p className="text-sm sm:text-2xl font-extrabold text-credit-light mt-1">
+        <div className="flex-1 min-w-[100px] bg-bg-card border border-white/[0.07] rounded-xl py-2 px-3 sm:p-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
+          <p className="text-[9px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Credit</p>
+          <p className="text-xs sm:text-lg font-extrabold text-credit-light mt-0.5">
             +{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_credit)}
           </p>
         </div>
 
         {/* Total Debit */}
-        <div className="flex-1 min-w-[120px] bg-bg-card border border-white/[0.07] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
-          <p className="text-[10px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Debit</p>
-          <p className="text-sm sm:text-2xl font-extrabold text-debit-light mt-1">
+        <div className="flex-1 min-w-[100px] bg-bg-card border border-white/[0.07] rounded-xl py-2 px-3 sm:p-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full blur-xl pointer-events-none" />
+          <p className="text-[9px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Debit</p>
+          <p className="text-xs sm:text-lg font-extrabold text-debit-light mt-0.5">
             -{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_debit)}
           </p>
         </div>
 
         {/* Net Balance */}
-        <div className="flex-1 min-w-[120px] bg-bg-card border border-white/[0.07] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-2xl pointer-events-none" />
-          <p className="text-[10px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Net Balance</p>
-          <p className={`text-sm sm:text-2xl font-extrabold mt-1 ${summary.balance >= 0 ? 'text-credit-light' : 'text-debit-light'}`}>
+        <div className="flex-1 min-w-[100px] bg-bg-card border border-white/[0.07] rounded-xl py-2 px-3 sm:p-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-accent/5 rounded-full blur-xl pointer-events-none" />
+          <p className="text-[9px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Net Balance</p>
+          <p className={`text-xs sm:text-lg font-extrabold mt-0.5 ${summary.balance >= 0 ? 'text-credit-light' : 'text-debit-light'}`}>
             {summary.balance >= 0 ? '+' : ''}{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.balance)}
           </p>
         </div>
@@ -315,8 +315,8 @@ export default function TransactionsPage() {
 
       {/* ── Filter toolbar ────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 mb-6">
-        {/* Row 1: Search + Type Filter + View Toggle */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {/* Row 1: Search + (Type Filter & View Toggle grouped side-by-side on mobile) */}
+        <div className="flex flex-col md:flex-row gap-3">
           {/* Search */}
           <div className="relative flex-1">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-txt-muted" />
@@ -331,42 +331,47 @@ export default function TransactionsPage() {
             />
           </div>
 
-          {/* Type filter */}
-          <div className="flex items-center gap-1 p-1 bg-bg-card border border-white/[0.07] rounded-xl shrink-0">
-            <Filter size={13} className="text-txt-muted ml-2 shrink-0" />
-            {(['all', 'credit', 'debit'] as FilterType[]).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer
-                  ${filter === f
-                    ? f === 'credit' ? 'bg-emerald-500/20 text-credit-light'
-                      : f === 'debit' ? 'bg-red-500/20 text-debit-light'
-                      : 'bg-accent/20 text-accent-light'
-                    : 'text-txt-muted hover:text-txt-secondary'
-                  }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+          {/* Row group for Type Filter and View Toggle (side-by-side flex row on mobile) */}
+          <div className="flex flex-row items-center justify-between gap-2 w-full md:w-auto">
+            {/* Type filter */}
+            <div className="flex items-center gap-1 p-1 bg-bg-card border border-white/[0.07] rounded-xl shrink-0 flex-1 md:flex-initial justify-between">
+              <Filter size={13} className="text-txt-muted ml-2 shrink-0" />
+              <div className="flex items-center gap-1">
+                {(['all', 'credit', 'debit'] as FilterType[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer
+                      ${filter === f
+                        ? f === 'credit' ? 'bg-emerald-500/20 text-credit-light'
+                          : f === 'debit' ? 'bg-red-500/20 text-debit-light'
+                          : 'bg-accent/20 text-accent-light'
+                        : 'text-txt-muted hover:text-txt-secondary'
+                      }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* View toggle */}
-          <div className="flex items-center gap-1 p-1 bg-bg-card border border-white/[0.07] rounded-xl shrink-0">
-            <button
-              onClick={() => setView('card')}
-              className={`p-2 rounded-lg transition-all cursor-pointer ${view === 'card' ? 'bg-accent/20 text-accent-light' : 'text-txt-muted hover:text-txt-secondary'}`}
-              title="Card view"
-            >
-              <LayoutGrid size={15} />
-            </button>
-            <button
-              onClick={() => setView('table')}
-              className={`p-2 rounded-lg transition-all cursor-pointer ${view === 'table' ? 'bg-accent/20 text-accent-light' : 'text-txt-muted hover:text-txt-secondary'}`}
-              title="Table view"
-            >
-              <List size={15} />
-            </button>
+            {/* View toggle */}
+            <div className="flex items-center gap-1 p-1 bg-bg-card border border-white/[0.07] rounded-xl shrink-0">
+              <button
+                onClick={() => setView('card')}
+                className={`p-2 rounded-lg transition-all cursor-pointer ${view === 'card' ? 'bg-accent/20 text-accent-light' : 'text-txt-muted hover:text-txt-secondary'}`}
+                title="Card view"
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setView('table')}
+                className={`p-2 rounded-lg transition-all cursor-pointer ${view === 'table' ? 'bg-accent/20 text-accent-light' : 'text-txt-muted hover:text-txt-secondary'}`}
+                title="Table view"
+              >
+                <List size={15} />
+              </button>
+            </div>
           </div>
         </div>
 

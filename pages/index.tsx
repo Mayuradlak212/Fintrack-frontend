@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Wallet, TrendingUp, TrendingDown, ArrowUpRight, Plus, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -11,26 +11,43 @@ import { Transaction, TransactionForm } from '../types';
 import { toast } from 'react-toastify';
 import { useRouter } from 'next/router';
 import { formatISTDate } from '../lib/dateUtils';
+import { fetchApi } from '../lib/api';
 
 export default function DashboardPage() {
   const { transactions, addTransaction, isLoading: txLoading } = useTransactions();
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
+  const [summary, setSummary] = useState({ total_credit: 0, total_debit: 0, balance: 0, credit_count: 0, debit_count: 0 });
 
   // Redirect if not logged in
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isLoading && !user) router.push('/auth/login');
   }, [user, isLoading, router]);
 
-  const totalCredit = transactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0);
-  const totalDebit = transactions.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0);
-  const balance = totalCredit - totalDebit;
+  const fetchSummary = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await fetchApi('/api/transactions/summary');
+      setSummary(data);
+    } catch (err) {
+      console.error('Failed to fetch summary:', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  const totalCredit = summary.total_credit;
+  const totalDebit = summary.total_debit;
+  const balance = summary.balance;
   const recent = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
 
   const handleAdd = async (tx: TransactionForm) => {
     await addTransaction(tx);
     toast.success('Transaction added!');
+    fetchSummary();
   };
 
   if (isLoading || !user) return null;
@@ -60,8 +77,8 @@ export default function DashboardPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <SummaryCard title="Balance" amount={balance} icon={Wallet} color="accent" delay={0} subtitle="Net total" />
-        <SummaryCard title="Total Credit" amount={totalCredit} icon={TrendingUp} color="credit" delay={0.07} subtitle={`${transactions.filter(t => t.type === 'credit').length} transactions`} />
-        <SummaryCard title="Total Debit" amount={totalDebit} icon={TrendingDown} color="debit" delay={0.14} subtitle={`${transactions.filter(t => t.type === 'debit').length} transactions`} />
+        <SummaryCard title="Total Credit" amount={totalCredit} icon={TrendingUp} color="credit" delay={0.07} subtitle={`${summary.credit_count} transactions`} />
+        <SummaryCard title="Total Debit" amount={totalDebit} icon={TrendingDown} color="debit" delay={0.14} subtitle={`${summary.debit_count} transactions`} />
       </div>
 
       {/* Recent transactions */}
