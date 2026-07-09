@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { X, Upload, FileText, ImageIcon, Trash2, TrendingUp, TrendingDown, MapPin, Loader2 } from 'lucide-react';
+import { X, Upload, FileText, ImageIcon, Trash2, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import {
   TransactionForm,
@@ -124,44 +124,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
     return '';
   }, []);
 
-  // ── Request Geolocation when modal opens ───────────────────────────────────
-  useEffect(() => {
-    // Only run when opening the modal, and there is no existing location text, and not already attempted for this open
-    if (!open || (initial && initial.location_text) || geoAttemptedRef.current) return;
-    if (!('geolocation' in navigator)) return;
-
-    geoAttemptedRef.current = true;
-    setIsLocating(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
-
-        try {
-          // Single call — Google Maps handles precision, Nominatim is internal fallback
-          const label = await reverseGeocode(lat, lng);
-
-          setForm((f) => ({
-            ...f,
-            location_text: label || 'Unknown location',
-          }));
-        } catch (err) {
-          console.error('Failed to reverse geocode', err);
-          setForm((f) => ({ ...f, location_text: 'Location unavailable' }));
-        } finally {
-          setIsLocating(false);
-        }
-      },
-      (err) => {
-        console.error('Geolocation error:', err);
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initial]);
+  // Geolocation fetching disabled per user request
 
 
   const onDrop = useCallback((accepted: File[]) => {
@@ -361,31 +324,12 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                 </div>
               </div>
 
-              {/* Receipt Upload & Location */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                    Location
-                  </label>
-                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/[0.09] bg-white/[0.03]">
-                    <MapPin size={16} className="text-accent shrink-0" />
-                    {isLocating ? (
-                      <div className="flex items-center gap-2 text-xs text-txt-muted">
-                        <Loader2 size={12} className="animate-spin" /> Locating...
-                      </div>
-                    ) : form.location_text ? (
-                      <span className="text-xs text-txt-secondary truncate flex-1">{form.location_text}</span>
-                    ) : (
-                      <span className="text-xs text-txt-muted flex-1 italic">Unknown</span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                    Receipt (optional)
-                  </label>
-                  {form.receiptBase64 ? (
+              {/* Receipt Upload (optional) */}
+              <div>
+                <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
+                  Receipt (optional)
+                </label>
+                {form.receiptBase64 ? (
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.09] bg-white/[0.03]">
                     {form.receiptMimeType === 'application/pdf'
                       ? <FileText size={18} className="text-accent-light shrink-0" />
@@ -423,7 +367,6 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                     </p>
                   </div>
                 )}
-                </div>
               </div>
 
               {/* Actions */}
