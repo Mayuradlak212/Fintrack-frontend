@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import pkg from '../package.json';
 
 export default function ProfilePage() {
   const { user, updateProfile, isLoading } = useAuth();
@@ -193,6 +194,13 @@ export default function ProfilePage() {
               </button>
             </div>
           </form>
+
+          {/* Version footer */}
+          <div className="mt-6 text-center">
+            <p className="text-[11px] text-txt-muted/40 font-semibold tracking-wider uppercase">
+              App Version {pkg.version}
+            </p>
+          </div>
         </motion.div>
       </div>
     </Layout>
