@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, LayoutGrid, List, Search, Filter, Loader2, Download } from 'lucide-react';
+import { Plus, LayoutGrid, List, Search, Filter, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import TransactionCard from '../components/TransactionCard';
@@ -12,11 +12,12 @@ import { useAuth } from '../context/AuthContext';
 import { Transaction, TransactionForm } from '../types';
 import { toast } from 'react-toastify';
 import { exportTransactionsToXlsx } from '../lib/exportXlsx';
+import { fetchApi } from '../lib/api';
 
 type FilterType = 'all' | 'credit' | 'debit';
 
-const PER_PAGE_CARD  = 12; // cards per infinite-scroll batch
-const PER_PAGE_TABLE = 10; // rows per table page
+const PER_PAGE_CARD  = 12; // items per card view page
+const PER_PAGE_TABLE = 10; // items per table view page
 
 /** Debounce a value: returns the latest value only after `delay` ms of no changes. */
 function useDebouncedValue<T>(value: T, delay: number): T {
@@ -28,6 +29,80 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debounced;
 }
 
+/** Unified Pagination Controls Component */
+function PaginationControls({
+  page,
+  totalPages,
+  total,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  const getPages = (): (number | '...')[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | '...')[] = [1];
+    if (page > 3) pages.push('...');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+      pages.push(i);
+    }
+    if (page < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+    return pages;
+  };
+
+  const btnBase =
+    'flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer';
+
+  return (
+    <div className="flex items-center justify-between mt-6 px-1">
+      <p className="text-xs text-txt-muted">
+        {total} transaction{total !== 1 ? 's' : ''}
+      </p>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          className={`${btnBase} border border-white/[0.07] bg-bg-card text-txt-muted hover:bg-white/[0.08] hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          <ChevronLeft size={13} />
+        </button>
+
+        {getPages().map((p, i) =>
+          p === '...' ? (
+            <span key={`ellipsis-${i}`} className="w-8 text-center text-xs text-txt-muted">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p as number)}
+              className={`${btnBase} ${
+                p === page
+                  ? 'bg-accent/20 border border-accent/40 text-accent-light'
+                  : 'border border-white/[0.07] bg-bg-card text-txt-muted hover:bg-white/[0.08] hover:text-txt-primary'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          className={`${btnBase} border border-white/[0.07] bg-bg-card text-txt-muted hover:bg-white/[0.08] hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          <ChevronRight size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function TransactionsPage() {
   const {
     transactions,
@@ -36,7 +111,6 @@ export default function TransactionsPage() {
     deleteTransaction,
     isLoading: txLoading,
     fetchPage,
-    fetchNextPage,
     resetAndFetch,
     pagination,
   } = useTransactions();
@@ -51,16 +125,11 @@ export default function TransactionsPage() {
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const [modalOpen, setModalOpen] = useState(false);
   const [editTx, setEditTx]     = useState<Transaction | null>(null);
-  const [tablePage, setTablePage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [summary, setSummary]   = useState({ total_credit: 0, total_debit: 0, balance: 0 });
 
   // Debounce date range — backend fetch fires 500 ms after user stops picking
   const debouncedDateRange = useDebouncedValue(dateRange, 500);
-
-  // Infinite scroll state
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [hasMore, setHasMore]   = useState(true);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const cardPageRef = useRef(1); // track current card page without re-renders
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -79,56 +148,43 @@ export default function TransactionsPage() {
     [filter, debouncedDateRange]
   );
 
-  // ── Reset when filters change ─────────────────────────────────────────────
+  // ── Fetch summary stats based on current date range & filter ──────────────
   useEffect(() => {
-    cardPageRef.current = 1;
-    setHasMore(true);
-    setTablePage(1);
+    if (!user) return;
+    const fetchSummary = async () => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (filter !== 'all') queryParams.set('type', filter);
+        if (debouncedDateRange.from) queryParams.set('date_from', debouncedDateRange.from);
+        if (debouncedDateRange.to) queryParams.set('date_to', debouncedDateRange.to);
 
-    if (view === 'card') {
-      resetAndFetch(buildParams(1, PER_PAGE_CARD));
-    } else {
-      fetchPage(buildParams(1, PER_PAGE_TABLE));
-    }
+        const data = await fetchApi(`/api/transactions/summary?${queryParams.toString()}`);
+        setSummary(data);
+      } catch (err) {
+        console.error('Failed to fetch summary:', err);
+      }
+    };
+    fetchSummary();
+  }, [user, filter, debouncedDateRange]);
+
+  // ── Reset when filters / view changes ──────────────────────────────────────
+  useEffect(() => {
+    setCurrentPage(1);
+    const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
+    resetAndFetch(buildParams(1, perPage));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, debouncedDateRange, view]);
 
-  // ── Table page change ─────────────────────────────────────────────────────
-  const handleTablePageChange = useCallback(
+  // ── Page change handler ────────────────────────────────────────────────────
+  const handlePageChange = useCallback(
     (page: number) => {
-      setTablePage(page);
-      fetchPage(buildParams(page, PER_PAGE_TABLE));
+      setCurrentPage(page);
+      const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
+      fetchPage(buildParams(page, perPage));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     },
-    [buildParams, fetchPage]
+    [buildParams, fetchPage, view]
   );
-
-  // ── Intersection Observer (infinite scroll for card view) ─────────────────
-  useEffect(() => {
-    if (view !== 'card') return;
-
-    const observer = new IntersectionObserver(
-      async (entries) => {
-        if (!entries[0].isIntersecting || isFetchingMore || !hasMore) return;
-
-        const nextPage = cardPageRef.current + 1;
-        setIsFetchingMore(true);
-        const moreExist = await fetchNextPage(buildParams(nextPage, PER_PAGE_CARD));
-        if (moreExist) {
-          cardPageRef.current = nextPage;
-          setHasMore(true);
-        } else {
-          setHasMore(false);
-        }
-        setIsFetchingMore(false);
-      },
-      { threshold: 0.1, rootMargin: '200px' }
-    );
-
-    const sentinel = sentinelRef.current;
-    if (sentinel) observer.observe(sentinel);
-    return () => { if (sentinel) observer.unobserve(sentinel); };
-  }, [view, isFetchingMore, hasMore, fetchNextPage, buildParams]);
 
   // ── Client-side search filter (applied on top of backend results) ─────────
   const filtered = search
@@ -148,6 +204,9 @@ export default function TransactionsPage() {
       await addTransaction(tx);
       toast.success('Transaction added!');
     }
+    // Refresh current page and summary after change
+    const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
+    fetchPage(buildParams(currentPage, perPage));
     setEditTx(null);
   };
 
@@ -208,6 +267,36 @@ export default function TransactionsPage() {
           >
             <Plus size={15} /> Add Transaction
           </button>
+        </div>
+      </div>
+
+      {/* ── Summary Stats ────────────────────────────────────────────────── */}
+      <div className="flex flex-row gap-3 sm:gap-4 mb-6 overflow-x-auto w-full">
+        {/* Total Credit */}
+        <div className="flex-1 min-w-[120px] bg-bg-card border border-white/[0.07] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+          <p className="text-[10px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Credit</p>
+          <p className="text-sm sm:text-2xl font-extrabold text-credit-light mt-1">
+            +{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_credit)}
+          </p>
+        </div>
+
+        {/* Total Debit */}
+        <div className="flex-1 min-w-[120px] bg-bg-card border border-white/[0.07] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl pointer-events-none" />
+          <p className="text-[10px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Debit</p>
+          <p className="text-sm sm:text-2xl font-extrabold text-debit-light mt-1">
+            -{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_debit)}
+          </p>
+        </div>
+
+        {/* Net Balance */}
+        <div className="flex-1 min-w-[120px] bg-bg-card border border-white/[0.07] rounded-2xl p-4 sm:p-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-2xl pointer-events-none" />
+          <p className="text-[10px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Net Balance</p>
+          <p className={`text-sm sm:text-2xl font-extrabold mt-1 ${summary.balance >= 0 ? 'text-credit-light' : 'text-debit-light'}`}>
+            {summary.balance >= 0 ? '+' : ''}{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.balance)}
+          </p>
         </div>
       </div>
 
@@ -281,7 +370,7 @@ export default function TransactionsPage() {
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
-        {txLoading && !isFetchingMore ? (
+        {txLoading ? (
           <motion.div
             key="loading"
             initial={{ opacity: 0, y: 10 }}
@@ -320,22 +409,12 @@ export default function TransactionsPage() {
                   ))}
                 </div>
 
-                {/* Sentinel for IntersectionObserver */}
-                <div ref={sentinelRef} className="h-4 mt-4" />
-
-                {/* Fetch-more spinner */}
-                {isFetchingMore && (
-                  <div className="flex justify-center py-6">
-                    <Loader2 className="w-6 h-6 text-accent animate-spin" />
-                  </div>
-                )}
-
-                {/* End-of-list message */}
-                {!hasMore && filtered.length > 0 && (
-                  <p className="text-center text-xs text-txt-muted py-6">
-                    All {pagination.total} transactions loaded ✓
-                  </p>
-                )}
+                <PaginationControls
+                  page={currentPage}
+                  totalPages={pagination.pages}
+                  total={pagination.total}
+                  onPageChange={handlePageChange}
+                />
               </>
             )}
           </motion.div>
@@ -351,10 +430,10 @@ export default function TransactionsPage() {
               transactions={filtered}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              page={tablePage}
+              page={currentPage}
               totalPages={pagination.pages}
               total={pagination.total}
-              onPageChange={handleTablePageChange}
+              onPageChange={handlePageChange}
               isLoading={txLoading}
             />
           </motion.div>
