@@ -5,6 +5,7 @@ import { Wallet, Eye, EyeOff, Lock, Mail, ArrowRight, User as UserIcon } from 'l
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { LoginFormSchema, RegisterFormSchema } from '../../types';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const { login, register, user, isLoading } = useAuth();
@@ -186,6 +187,18 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Forgot password — login mode only */}
+            {!isRegister && (
+              <div className="text-right -mt-1">
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-xs text-accent-light hover:text-accent transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             {/* Error */}
             {error && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import { X, Upload, FileText, ImageIcon, Trash2, TrendingUp, TrendingDown, MapPin, Loader2 } from 'lucide-react';
@@ -65,6 +65,8 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
   const [errors, setErrors] = useState<ModalErrors>({});
   const [isLocating, setIsLocating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Tracks whether we already triggered geolocation for this modal open
+  const geoAttemptedRef = useRef(false);
 
   useEffect(() => {
     if (initial) {
@@ -91,54 +93,76 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
       });
     } else {
       setForm(emptyForm());
+      setIsLocating(false);          // ← clear any stale locating state
+      geoAttemptedRef.current = false; // ← allow geo to fire fresh
     }
     setErrors({});
   }, [initial, open]);
 
-  // Request Geolocation if no location text exists
-  useEffect(() => {
-    if (open && !form.location_text && !isLocating) {
-      if ('geolocation' in navigator) {
-        setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
+  // ── Reverse-geocoding — LocationIQ (full address) ─────────────────────────
+  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+    const LIQ_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
+    if (!LIQ_KEY) return '';
 
-            try {
-              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`);
-              const data = await res.json();
-              if (data?.address) {
-                const local = data.address.suburb || data.address.neighbourhood || data.address.road || data.address.residential;
-                const city = data.address.city || data.address.town || data.address.county || data.address.state;
-                
-                let detailedLocation = city;
-                if (local && city && local !== city) {
-                  detailedLocation = `${local}, ${city}`;
-                } else if (local) {
-                  detailedLocation = local;
-                }
-                
-                if (detailedLocation) {
-                  setForm((f) => ({ ...f, location_text: detailedLocation }));
-                }
-              }
-            } catch (err) {
-              console.error('Failed to reverse geocode', err);
-            } finally {
-              setIsLocating(false);
-            }
-          },
-          (err) => {
-            console.error('Geolocation error:', err);
-            setIsLocating(false);
-          },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
+    try {
+      const res = await fetch(
+        `https://us1.locationiq.com/v1/reverse` +
+        `?key=${LIQ_KEY}&lat=${lat}&lon=${lng}` +
+        `&format=json&normalizeaddress=1&accept-language=en`
+      );
+      const data = await res.json();
+
+      if (data?.display_name) {
+        // Use the full formatted address — strip only the trailing country name and postal code
+        const trailRe = /,?\s*(india|\d{6})\s*$/i;
+        return data.display_name.replace(trailRe, '').replace(trailRe, '').trim();
       }
+    } catch (err) {
+      console.error('LocationIQ geocoding failed', err);
     }
-  }, [open, initial, form.location_text, isLocating]);
+
+    return '';
+  }, []);
+
+  // ── Request Geolocation when modal opens ───────────────────────────────────
+  useEffect(() => {
+    // Only run when opening the modal, and there is no existing location text, and not already attempted for this open
+    if (!open || (initial && initial.location_text) || geoAttemptedRef.current) return;
+    if (!('geolocation' in navigator)) return;
+
+    geoAttemptedRef.current = true;
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setForm((f) => ({ ...f, latitude: lat, longitude: lng }));
+
+        try {
+          // Single call — Google Maps handles precision, Nominatim is internal fallback
+          const label = await reverseGeocode(lat, lng);
+
+          setForm((f) => ({
+            ...f,
+            location_text: label || 'Unknown location',
+          }));
+        } catch (err) {
+          console.error('Failed to reverse geocode', err);
+          setForm((f) => ({ ...f, location_text: 'Location unavailable' }));
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (err) => {
+        console.error('Geolocation error:', err);
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial]);
+
 
   const onDrop = useCallback((accepted: File[]) => {
     const file = accepted[0];
@@ -413,11 +437,11 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
                 </button>
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || isLocating}
                   className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-accent to-accent-light shadow-[0_4px_16px_rgba(124,58,237,0.4)] hover:shadow-[0_6px_22px_rgba(124,58,237,0.5)] disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
-                  {initial ? 'Save Changes' : 'Add Transaction'}
+                  {(isSaving || isLocating) ? <Loader2 size={16} className="animate-spin" /> : null}
+                  {isLocating ? 'Getting location…' : initial ? 'Save Changes' : 'Add Transaction'}
                 </button>
               </div>
             </form>

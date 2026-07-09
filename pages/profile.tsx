@@ -158,9 +158,15 @@ export default function ProfilePage() {
                   </label>
                   <input
                     type="tel"
+                    inputMode="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => {
+                      // Strip anything that isn't a digit, +, space, -, or ()
+                      const clean = e.target.value.replace(/[^\d+\s\-().]/g, '');
+                      setPhone(clean);
+                    }}
                     placeholder="+91 98765 43210"
+                    maxLength={15}
                     className="w-full bg-white/[0.04] border border-white/[0.09] rounded-xl px-4 py-3 text-sm text-txt-primary outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
                   />
                 </div>
