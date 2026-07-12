@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { Wallet, Eye, EyeOff, Lock, Mail, ArrowRight, User as UserIcon } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
+import { useAppDispatch, useAppSelector } from '../../store';
+import { login, register } from '../../store/authSlice';
+import { toast } from '../../utils/toast';
 import { LoginFormSchema, RegisterFormSchema } from '../../types';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const { login, register, user, isLoading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user, isLoading } = useAppSelector((state) => state.auth);
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   
@@ -52,24 +54,22 @@ export default function LoginPage() {
     
     try {
       if (isRegister) {
-        const ok = await register({ name, email, password });
-        if (ok) {
-          toast.success('Account created successfully! 👋');
-          router.push('/');
-        }
+        await dispatch(register({ name, email, password })).unwrap();
+        toast.success('Account created successfully! 👋');
+        router.push('/');
       } else {
-        const ok = await login({ email, password });
-        if (ok) {
-          toast.success('Welcome back! 👋');
-          router.push('/');
-        }
+        await dispatch(login({ email, password })).unwrap();
+        toast.success('Welcome back! 👋');
+        router.push('/');
       }
-    } catch (err: any) {
-      let msg = err?.message || 'Something went wrong';
+    } catch (err: unknown) {
+      let msg = typeof err === 'string' ? err : 'Something went wrong';
       
       // If the backend sent a 422 Unprocessable Entity, extract the validation detail
-      if (err?.data?.detail && Array.isArray(err.data.detail)) {
-        msg = err.data.detail.map((d: any) => `${d.loc?.[d.loc.length-1]}: ${d.msg}`).join(', ');
+      type ApiErr = { data?: { detail?: Array<{ loc?: string[]; msg: string }> } };
+      const errorData = (err as ApiErr)?.data;
+      if (errorData?.detail && Array.isArray(errorData.detail)) {
+        msg = errorData.detail.map(d => `${d.loc?.[d.loc.length-1]}: ${d.msg}`).join(', ');
       }
 
       setError(msg);

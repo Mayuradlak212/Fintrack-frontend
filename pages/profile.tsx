@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { useAuth } from '../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../store';
+import { updateProfile } from '../store/authSlice';
 import { Camera, Save, User as UserIcon, Loader2 } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import pkg from '../package.json';
 
 export default function ProfilePage() {
-  const { user, updateProfile, isLoading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user, isLoading } = useAppSelector((state) => state.auth);
   const router = useRouter();
   
   const [name, setName] = useState('');
@@ -63,15 +65,15 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      await updateProfile({
+      await dispatch(updateProfile({
         name,
         phone: phone.trim() || undefined,
         avatar_base64: avatarBase64,
         avatar_mime_type: avatarMimeType,
-      });
+      })).unwrap();
       toast.success('Profile updated successfully!');
-    } catch (err) {
-      toast.error('Failed to update profile');
+    } catch (err: unknown) {
+      toast.error((err as string) || 'Failed to update profile');
     } finally {
       setIsSaving(false);
     }

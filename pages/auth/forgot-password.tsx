@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { Wallet, Mail, ArrowLeft, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {

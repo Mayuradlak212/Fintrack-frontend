@@ -10,7 +10,7 @@ import {
   CategorySchema,
 } from '../types';
 import { toISO } from '../lib/dateUtils';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast';
 
 const CATEGORIES = CategorySchema.options;
 
@@ -21,12 +21,11 @@ const ModalFormSchema = TransactionFormSchema.extend({
 });
 type ModalErrors = Partial<Record<keyof z.infer<typeof ModalFormSchema>, string>>;
 
-/** Safely maps Zod field errors to ModalErrors — filters non-string paths */
 function parseZodErrors(error: z.ZodError): ModalErrors {
   const out: ModalErrors = {};
   for (const issue of error.issues) {
     const key = issue.path[0];
-    if (typeof key === 'string' && key in ({} as z.infer<typeof ModalFormSchema>)) {
+    if (typeof key === 'string') {
       out[key as keyof ModalErrors] = issue.message;
     }
   }
@@ -155,7 +154,10 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
     // ── Zod runtime validation ──
     const result = ModalFormSchema.safeParse(form);
     if (!result.success) {
-      setErrors(parseZodErrors(result.error));
+      const errs = parseZodErrors(result.error);
+      setErrors(errs);
+      const errorMsg = Object.entries(errs).map(([k, v]) => `${k}: ${v}`).join(', ');
+      toast.error(`Validation failed: ${errorMsg}`);
       return;
     }
 

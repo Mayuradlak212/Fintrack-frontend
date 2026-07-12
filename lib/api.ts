@@ -1,7 +1,7 @@
 export class APIError extends Error {
   status: number;
-  data: any;
-  constructor(message: string, status: number, data: any = null) {
+  data: unknown;
+  constructor(message: string, status: number, data: unknown = null) {
     super(message);
     this.status = status;
     this.data = data;
@@ -43,10 +43,10 @@ export const removeToken = () => {
 };
 
 interface FetchOptions extends RequestInit {
-  data?: any;
+  data?: unknown;
 }
 
-export async function fetchApi<T = any>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+export async function fetchApi<T = unknown>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { data, headers: customHeaders, ...customOptions } = options;
 
   const token = getToken();
