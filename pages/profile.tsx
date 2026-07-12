@@ -63,11 +63,24 @@ export default function ProfilePage() {
       return;
     }
 
+    const cleanEmail = email.trim();
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      toast.error('Invalid email address');
+      return;
+    }
+
+    const cleanPhone = phone.trim();
+    if (cleanPhone && !/^\d{10}$/.test(cleanPhone)) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+
     setIsSaving(true);
     try {
       await dispatch(updateProfile({
         name,
-        phone: phone.trim() || undefined,
+        email: cleanEmail || undefined,
+        phone: cleanPhone || undefined,
         avatar_base64: avatarBase64,
         avatar_mime_type: avatarMimeType,
       })).unwrap();
@@ -145,13 +158,13 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                    Email Address <span className="lowercase text-txt-muted/50">(read-only)</span>
+                    Email Address
                   </label>
                   <input
                     type="email"
                     value={email}
-                    disabled
-                    className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 text-sm text-txt-muted cursor-not-allowed outline-none"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.09] rounded-xl px-4 py-3 text-sm text-txt-primary outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
                   />
                 </div>
 
