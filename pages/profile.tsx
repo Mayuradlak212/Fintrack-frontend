@@ -69,10 +69,15 @@ export default function ProfilePage() {
       return;
     }
 
-    const cleanPhone = phone.trim();
-    if (cleanPhone && !/^\d{10}$/.test(cleanPhone)) {
-      toast.error('Phone number must be exactly 10 digits');
-      return;
+    const rawPhone = phone.trim();
+    let cleanPhone = undefined;
+    if (rawPhone) {
+      const digitsOnly = rawPhone.replace(/\D/g, '');
+      if (digitsOnly.length !== 10) {
+        toast.error('Phone number must be exactly 10 digits');
+        return;
+      }
+      cleanPhone = digitsOnly;
     }
 
     setIsSaving(true);

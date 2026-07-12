@@ -5,9 +5,9 @@ import { X, FileText, ImageIcon, Download } from 'lucide-react';
 interface ReceiptViewerProps {
   open: boolean;
   onClose: () => void;
-  receiptBase64?: string;
-  receiptName?: string;
-  receiptMimeType?: string;
+  receiptBase64?: string | null;
+  receiptName?: string | null;
+  receiptMimeType?: string | null;
 }
 
 export default function ReceiptViewer({ open, onClose, receiptBase64, receiptName, receiptMimeType }: ReceiptViewerProps) {
