@@ -43,27 +43,29 @@ function PaginationControls({
   if (totalPages <= 1) return null;
 
   const getPages = (): (number | '...')[] => {
-    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
-    const pages: (number | '...')[] = [1];
-    if (page > 3) pages.push('...');
-    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
-      pages.push(i);
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    
+    if (page <= 3) {
+      return [1, 2, 3, '...', totalPages];
     }
-    if (page < totalPages - 2) pages.push('...');
-    pages.push(totalPages);
-    return pages;
+    
+    if (page >= totalPages - 2) {
+      return [1, '...', totalPages - 2, totalPages - 1, totalPages];
+    }
+    
+    return [1, '...', page, '...', totalPages];
   };
 
   const btnBase =
     'flex items-center justify-center w-8 h-8 rounded-lg text-xs font-semibold transition-all cursor-pointer';
 
   return (
-    <div className="flex items-center justify-between mt-6 px-1">
-      <p className="text-xs text-txt-muted">
+    <div className="flex flex-col sm:flex-row items-center justify-between mt-6 px-1 gap-4">
+      <p className="text-xs text-txt-muted w-full text-center sm:text-left">
         {total} transaction{total !== 1 ? 's' : ''}
       </p>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-center gap-1 flex-wrap w-full sm:w-auto">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
