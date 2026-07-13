@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, X, Wallet, User as UserIcon, Receipt, PieChart, Settings, Menu } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../store';
+import { logout } from '../store/authSlice';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,7 +19,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
-  const { user, logout } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   const handleNav = (href: string) => {
@@ -99,7 +101,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 <Link href="/profile">
                   <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer overflow-hidden shrink-0">
                     {user.avatar_base64 ? (
-                      <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
+                      // eslint-disable-next-line @next/next/no-img-element
+          <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       <UserIcon className="w-5 h-5 text-accent" />
                     )}
@@ -114,7 +117,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
             {/* Logout */}
             <button
-              onClick={() => { logout(); router.push('/auth/login'); onClose(); }}
+              onClick={() => { dispatch(logout()); router.push('/auth/login'); onClose(); }}
               className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-red-500/25 bg-red-500/8 text-debit-light text-sm font-medium hover:bg-red-500/15 transition-colors mt-2 w-full cursor-pointer"
             >
               <LogOut size={15} />

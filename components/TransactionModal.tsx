@@ -10,7 +10,7 @@ import {
   CategorySchema,
 } from '../types';
 import { toISO } from '../lib/dateUtils';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast';
 
 const CATEGORIES = CategorySchema.options;
 
@@ -21,12 +21,11 @@ const ModalFormSchema = TransactionFormSchema.extend({
 });
 type ModalErrors = Partial<Record<keyof z.infer<typeof ModalFormSchema>, string>>;
 
-/** Safely maps Zod field errors to ModalErrors — filters non-string paths */
 function parseZodErrors(error: z.ZodError): ModalErrors {
   const out: ModalErrors = {};
   for (const issue of error.issues) {
     const key = issue.path[0];
-    if (typeof key === 'string' && key in ({} as z.infer<typeof ModalFormSchema>)) {
+    if (typeof key === 'string') {
       out[key as keyof ModalErrors] = issue.message;
     }
   }
@@ -76,8 +75,9 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
         if (!isNaN(parsed.getTime())) {
           formattedDate = getLocalDatetimeString(parsed);
         }
-      } catch(e) {}
+      } catch {}
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         type: initial.type,
         amount: initial.amount,
@@ -100,7 +100,8 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
   }, [initial, open]);
 
   // ── Reverse-geocoding — LocationIQ (full address) ─────────────────────────
-  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
     const LIQ_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
     if (!LIQ_KEY) return '';
 
@@ -155,7 +156,10 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
     // ── Zod runtime validation ──
     const result = ModalFormSchema.safeParse(form);
     if (!result.success) {
-      setErrors(parseZodErrors(result.error));
+      const errs = parseZodErrors(result.error);
+      setErrors(errs);
+      const errorMsg = Object.entries(errs).map(([k, v]) => `${k}: ${v}`).join(', ');
+      toast.error(`Validation failed: ${errorMsg}`);
       return;
     }
 
@@ -179,7 +183,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
       setIsSaving(true);
       await onSave(payload);
       onClose();
-    } catch (err) {
+    } catch {
       toast.error('Failed to save transaction');
     } finally {
       setIsSaving(false);

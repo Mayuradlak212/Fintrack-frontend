@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Paperclip, TrendingUp, TrendingDown, Calendar, Tag, MapPin, Eye, Hash } from 'lucide-react';
+import { Pencil, Trash2, Paperclip, TrendingUp, TrendingDown, Calendar, Tag, Eye, Hash } from 'lucide-react';
 import { Transaction } from '../types';
 import ConfirmDialog from './ConfirmDialog';
 import ReceiptViewer from './ReceiptViewer';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, LayoutGrid, List, Search, Filter, Loader2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/router';
@@ -7,12 +7,11 @@ import TransactionCard from '../components/TransactionCard';
 import TransactionTable from '../components/TransactionTable';
 import TransactionModal from '../components/TransactionModal';
 import DateRangePicker from '../components/DateRangePicker';
-import { useTransactions } from '../context/TransactionContext';
-import { useAuth } from '../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../store';
+import { addTransaction, updateTransaction, deleteTransaction, fetchAllTransactions } from '../store/transactionSlice';
 import { Transaction, TransactionForm } from '../types';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast';
 import { exportTransactionsToXlsx } from '../lib/exportXlsx';
-import { fetchApi } from '../lib/api';
 
 type FilterType = 'all' | 'credit' | 'debit';
 
@@ -104,18 +103,9 @@ function PaginationControls({
 }
 
 export default function TransactionsPage() {
-  const {
-    transactions,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    isLoading: txLoading,
-    fetchPage,
-    resetAndFetch,
-    pagination,
-  } = useTransactions();
-
-  const { user, isLoading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { transactions, isLoading: txLoading, isFetched } = useAppSelector((state) => state.transactions);
+  const { user, isLoading } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   // ── UI state ──────────────────────────────────────────────────────────────
@@ -126,89 +116,83 @@ export default function TransactionsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTx, setEditTx]     = useState<Transaction | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [summary, setSummary]   = useState({ total_credit: 0, total_debit: 0, balance: 0 });
 
-  // Debounce date range — backend fetch fires 500 ms after user stops picking
+  // Debounce date range
   const debouncedDateRange = useDebouncedValue(dateRange, 500);
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isLoading && !user) router.push('/auth/login');
   }, [user, isLoading, router]);
 
-  // ── Build params helper ───────────────────────────────────────────────────
-  const buildParams = useCallback(
-    (page: number, per_page: number) => ({
-      page,
-      per_page,
-      type: filter !== 'all' ? filter : undefined,
-      date_from: debouncedDateRange.from || undefined,
-      date_to:   debouncedDateRange.to   || undefined,
-    }),
-    [filter, debouncedDateRange]
-  );
-
-  // ── Fetch summary stats based on current date range & filter ──────────────
-  const fetchSummary = useCallback(async () => {
-    if (!user) return;
-    try {
-      const queryParams = new URLSearchParams();
-      if (filter !== 'all') queryParams.set('type', filter);
-      if (debouncedDateRange.from) queryParams.set('date_from', debouncedDateRange.from);
-      if (debouncedDateRange.to) queryParams.set('date_to', debouncedDateRange.to);
-
-      const data = await fetchApi(`/api/transactions/summary?${queryParams.toString()}`);
-      setSummary(data);
-    } catch (err) {
-      console.error('Failed to fetch summary:', err);
+  // ── Fetch all on mount ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (user && !isFetched && !txLoading) {
+      dispatch(fetchAllTransactions());
     }
-  }, [user, filter, debouncedDateRange]);
+  }, [user, dispatch, isFetched, txLoading]);
+
+  // ── Client-side Filtering ─────────────────────────────────────────────────
+  const filtered = transactions.filter(t => {
+    if (filter !== 'all' && t.type !== filter) return false;
+
+    if (debouncedDateRange.from) {
+      if (t?.createdAt && t.createdAt < debouncedDateRange.from) return false;
+    }
+    if (debouncedDateRange.to) {
+      if (t?.createdAt && t.createdAt.slice(0, 10) > debouncedDateRange.to) return false;
+    }
+
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      if (!t.description.toLowerCase().includes(q) && !t.category.toLowerCase().includes(q)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // ── Client-side Summary ───────────────────────────────────────────────────
+  const summary = filtered.reduce((acc, t) => {
+    if (t.type === 'credit') {
+      acc.total_credit += t.amount;
+      acc.balance += t.amount;
+    } else {
+      acc.total_debit += t.amount;
+      acc.balance -= t.amount;
+    }
+    return acc;
+  }, { total_credit: 0, total_debit: 0, balance: 0 });
+
+  // ── Client-side Pagination ────────────────────────────────────────────────
+  const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
 
   useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
+    if (currentPage > totalPages) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
-  // ── Reset when filters / view changes ──────────────────────────────────────
-  useEffect(() => {
-    setCurrentPage(1);
-    const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
-    resetAndFetch(buildParams(1, perPage));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, debouncedDateRange, view]);
+  const paginatedTransactions = filtered.slice((currentPage - 1) * perPage, currentPage * perPage);
 
-  // ── Page change handler ────────────────────────────────────────────────────
-  const handlePageChange = useCallback(
-    (page: number) => {
-      setCurrentPage(page);
-      const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
-      fetchPage(buildParams(page, perPage));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-    [buildParams, fetchPage, view]
-  );
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
-  // ── Client-side search filter (applied on top of backend results) ─────────
-  const filtered = search
-    ? transactions.filter(
-        t =>
-          t.description.toLowerCase().includes(search.toLowerCase()) ||
-          t.category.toLowerCase().includes(search.toLowerCase())
-      )
-    : transactions;
-
-  // ── CRUD handlers ─────────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
   const handleSave = async (tx: TransactionForm) => {
     if (editTx) {
-      await updateTransaction(editTx.id, tx);
+      await dispatch(updateTransaction({ id: editTx.id, tx })).unwrap();
       toast.success('Transaction updated!');
     } else {
-      await addTransaction(tx);
+      await dispatch(addTransaction(tx)).unwrap();
       toast.success('Transaction added!');
     }
-    // Refresh current page and summary after change
-    const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
-    fetchPage(buildParams(currentPage, perPage));
-    fetchSummary();
     setEditTx(null);
   };
 
@@ -216,13 +200,10 @@ export default function TransactionsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteTransaction(id);
+      await dispatch(deleteTransaction(id)).unwrap();
       toast.error('Transaction deleted');
-      const perPage = view === 'card' ? PER_PAGE_CARD : PER_PAGE_TABLE;
-      fetchPage(buildParams(currentPage, perPage));
-      fetchSummary();
-    } catch (err) {
-      toast.error('Failed to delete transaction');
+    } catch (err: unknown) {
+      toast.error((err as string) || 'Failed to delete transaction');
     }
   };
 
@@ -249,7 +230,7 @@ export default function TransactionsPage() {
             Transactions
           </h1>
           <p className="text-sm text-txt-muted mt-0.5">
-            {filtered.length} shown · {pagination.total} total
+            {filtered.length} shown · {transactions.length} total
             {isActive && (
               <span className="ml-1.5 text-accent-light font-medium">
                 (date filtered)
@@ -259,7 +240,6 @@ export default function TransactionsPage() {
         </div>
 
         <div className="flex items-center gap-2 self-start flex-wrap">
-          {/* Export button */}
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
@@ -270,7 +250,6 @@ export default function TransactionsPage() {
             <Download size={15} /> Export XLSX
           </button>
 
-          {/* Add button */}
           <button
             onClick={() => { setEditTx(null); setModalOpen(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white
@@ -315,7 +294,6 @@ export default function TransactionsPage() {
 
       {/* ── Filter toolbar ────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 mb-6">
-        {/* Row 1: Search + (Type Filter & View Toggle grouped side-by-side on mobile) */}
         <div className="flex flex-col md:flex-row gap-3">
           {/* Search */}
           <div className="relative flex-1">
@@ -324,14 +302,13 @@ export default function TransactionsPage() {
               type="text"
               placeholder="Search by description or category…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
               className="w-full pl-9 pr-4 py-2.5 bg-bg-card border border-white/[0.09] rounded-xl text-sm
                 text-txt-primary placeholder:text-txt-muted outline-none
                 focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
             />
           </div>
 
-          {/* Row group for Type Filter and View Toggle (side-by-side flex row on mobile) */}
           <div className="flex flex-row items-center justify-between gap-2 w-full md:w-auto">
             {/* Type filter */}
             <div className="flex items-center gap-1 p-1 bg-bg-card border border-white/[0.07] rounded-xl shrink-0 flex-1 md:flex-initial justify-between">
@@ -340,7 +317,7 @@ export default function TransactionsPage() {
                 {(['all', 'credit', 'debit'] as FilterType[]).map(f => (
                   <button
                     key={f}
-                    onClick={() => setFilter(f)}
+                    onClick={() => { setFilter(f); setCurrentPage(1); }}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer
                       ${filter === f
                         ? f === 'credit' ? 'bg-emerald-500/20 text-credit-light'
@@ -375,9 +352,9 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        {/* Row 2: Date Range Picker */}
+        {/* Date Range Picker */}
         <div className="flex flex-wrap items-center gap-3">
-          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          <DateRangePicker value={dateRange} onChange={(dr) => { setDateRange(dr); setCurrentPage(1); }} />
           {isActive && (
             <span className="text-xs text-accent-light/80 font-medium">
               📅 Showing{dateRange.from ? ` from ${dateRange.from}` : ''}{dateRange.to ? ` to ${dateRange.to}` : ''}
@@ -416,7 +393,7 @@ export default function TransactionsPage() {
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filtered.map((tx, i) => (
+                  {paginatedTransactions.map((tx, i) => (
                     <TransactionCard
                       key={tx.id}
                       tx={tx}
@@ -429,8 +406,8 @@ export default function TransactionsPage() {
 
                 <PaginationControls
                   page={currentPage}
-                  totalPages={pagination.pages}
-                  total={pagination.total}
+                  totalPages={totalPages}
+                  total={filtered.length}
                   onPageChange={handlePageChange}
                 />
               </>
@@ -445,12 +422,12 @@ export default function TransactionsPage() {
             transition={{ duration: 0.2 }}
           >
             <TransactionTable
-              transactions={filtered}
+              transactions={paginatedTransactions}
               onEdit={handleEdit}
               onDelete={handleDelete}
               page={currentPage}
-              totalPages={pagination.pages}
-              total={pagination.total}
+              totalPages={totalPages}
+              total={filtered.length}
               onPageChange={handlePageChange}
               isLoading={txLoading}
             />

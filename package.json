@@ -1,14 +1,16 @@
 {
   "name": "frontend",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.12.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
@@ -16,6 +18,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-dropzone": "^15.0.0",
+    "react-redux": "^9.3.0",
     "react-toastify": "^11.1.0",
     "xlsx": "^0.18.5",
     "zod": "^4.4.3"
@@ -27,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "husky": "^9.1.7",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

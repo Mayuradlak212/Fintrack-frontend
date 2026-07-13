@@ -3,8 +3,7 @@ import { motion } from 'framer-motion';
 import { BarChart2, PieChart, TrendingUp, TrendingDown } from 'lucide-react';
 import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
-import { useTransactions } from '../context/TransactionContext';
-import { useAuth } from '../context/AuthContext';
+import { useAppSelector } from '../store';
 import { Category } from '../types';
 import { formatIST } from '../lib/dateUtils';
 
@@ -22,8 +21,8 @@ const CATEGORY_COLORS: Record<Category, string> = {
 };
 
 export default function AnalyticsPage() {
-  const { transactions } = useTransactions();
-  const { user } = useAuth();
+  const { transactions } = useAppSelector((state) => state.transactions);
+  const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   React.useEffect(() => {

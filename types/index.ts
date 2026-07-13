@@ -26,20 +26,20 @@ export const TransactionSchema = z.object({
   description: z.string().min(1, 'Description is required').max(200),
   category: CategorySchema,
   date: z.string().datetime({ message: 'Invalid date' }),
-  receiptBase64: z.string().optional(),
-  receiptName: z.string().optional(),
-  receiptMimeType: z.string().optional(),
+  receiptBase64: z.string().nullish(),
+  receiptName: z.string().nullish(),
+  receiptMimeType: z.string().nullish(),
   // For backend compatibility mapping
-  receipt_base64: z.string().optional(),
-  receipt_name: z.string().optional(),
-  receipt_mime_type: z.string().optional(),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  location_text: z.string().optional(),
-  created_at: z.string().datetime().optional(),
-  updated_at: z.string().datetime().optional(),
-  createdAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime().optional(),
+  receipt_base64: z.string().nullish(),
+  receipt_name: z.string().nullish(),
+  receipt_mime_type: z.string().nullish(),
+  latitude: z.number().nullish(),
+  longitude: z.number().nullish(),
+  location_text: z.string().nullish(),
+  created_at: z.string().datetime().nullish(),
+  updated_at: z.string().datetime().nullish(),
+  createdAt: z.string().datetime().nullish(),
+  updatedAt: z.string().datetime().nullish(),
 });
 
 /** Schema for creating/editing — omits server-generated fields */
@@ -54,9 +54,9 @@ export const TransactionFormSchema = TransactionSchema.omit({
 export const UserSchema = z.object({
   email: z.string().email('Invalid email address'),
   name: z.string().min(1),
-  avatar_base64: z.string().optional(),
-  avatar_mime_type: z.string().optional(),
-  phone: z.string().optional(),
+  avatar_base64: z.string().nullish(),
+  avatar_mime_type: z.string().nullish(),
+  phone: z.string().nullish(),
 });
 
 // ─── Login/Register form ──────────────────────────────────────────────────────
@@ -85,21 +85,32 @@ export type User              = z.infer<typeof UserSchema>;
 export type LoginForm         = z.infer<typeof LoginFormSchema>;
 export type RegisterForm      = z.infer<typeof RegisterFormSchema>;
 
-// ─── Context types (contain functions — kept as TS types, not Zod schemas) ────
+// ─── Redux State Interfaces ───────────────────────────────────────────────────
 
-export interface AuthContextType {
+export interface AuthState {
   user: User | null;
-  login: (data: LoginForm) => Promise<boolean>;
-  register: (data: RegisterForm) => Promise<boolean>;
-  updateProfile: (data: Partial<User>) => Promise<boolean>;
-  logout: () => void;
   isLoading: boolean;
+  error: string | null;
 }
 
-export interface TransactionContextType {
+export interface PaginatedFetchParams {
+  page: number;
+  per_page?: number;
+  type?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export interface PaginationState {
+  page: number;
+  per_page: number;
+  total: number;
+  pages: number;
+}
+
+export interface TransactionState {
   transactions: Transaction[];
-  addTransaction: (tx: TransactionForm) => void;
-  updateTransaction: (id: string, tx: TransactionForm) => void;
-  deleteTransaction: (id: string) => void;
   isLoading: boolean;
+  isFetched: boolean;
+  error: string | null;
 }

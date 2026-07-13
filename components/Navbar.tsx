@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, Wallet, User } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../store';
+import { logout } from '../store/authSlice';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -16,7 +17,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onHamburger }: NavbarProps) {
-  const { user, logout } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   return (
@@ -77,7 +79,8 @@ export default function Navbar({ onHamburger }: NavbarProps) {
               <Link href="/profile">
                 <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer overflow-hidden">
                   {user.avatar_base64 ? (
-                    <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
+                    // eslint-disable-next-line @next/next/no-img-element
+          <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-4 h-4 text-accent" />
                   )}
@@ -86,7 +89,7 @@ export default function Navbar({ onHamburger }: NavbarProps) {
             </div>
           )}
           <button
-            onClick={() => { logout(); router.push('/auth/login'); }}
+            onClick={() => { dispatch(logout()); router.push('/auth/login'); }}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-debit-light text-xs font-medium hover:bg-red-500/20 transition-colors"
           >
             <LogOut size={13} />

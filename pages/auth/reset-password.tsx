@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
@@ -59,8 +60,10 @@ export default function ResetPasswordPage() {
       setSuccess(true);
       // Auto-redirect to login after 3s
       setTimeout(() => router.push('/auth/login'), 3000);
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || 'Reset failed. The link may have expired.';
+    } catch (err: unknown) {
+      type ApiErr = { response?: { data?: { error?: string } } };
+      const errorData = err as ApiErr;
+      const msg = errorData?.response?.data?.error || (err instanceof Error ? err.message : 'Reset failed. The link may have expired.');
       setError(msg);
     } finally {
       setLoading(false);

@@ -1,0 +1,16 @@
+#!/bin/sh
+echo "Running pre-commit hook..."
+
+# Get the directory of the frontend relative to the script location
+DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$DIR" || exit 1
+
+
+echo "Checking build errors..."
+npm run build || {
+  echo "Build failed. Please fix the errors before committing."
+  exit 1
+}
+
+echo "Pre-commit checks passed successfully."
+exit 0

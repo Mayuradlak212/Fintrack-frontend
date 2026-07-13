@@ -1,15 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { useAuth } from '../context/AuthContext';
+import { useAppDispatch, useAppSelector } from '../store';
+import { updateProfile } from '../store/authSlice';
 import { Camera, Save, User as UserIcon, Loader2 } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import pkg from '../package.json';
 
 export default function ProfilePage() {
-  const { user, updateProfile, isLoading } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user, isLoading } = useAppSelector((state) => state.auth);
   const router = useRouter();
   
   const [name, setName] = useState('');
@@ -23,6 +25,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(user.name);
       setEmail(user.email);
       setPhone(user.phone || '');
@@ -61,17 +64,35 @@ export default function ProfilePage() {
       return;
     }
 
+    const cleanEmail = email.trim();
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      toast.error('Invalid email address');
+      return;
+    }
+
+    const rawPhone = phone.trim();
+    let cleanPhone = undefined;
+    if (rawPhone) {
+      const digitsOnly = rawPhone.replace(/\D/g, '');
+      if (digitsOnly.length !== 10) {
+        toast.error('Phone number must be exactly 10 digits');
+        return;
+      }
+      cleanPhone = digitsOnly;
+    }
+
     setIsSaving(true);
     try {
-      await updateProfile({
+      await dispatch(updateProfile({
         name,
-        phone: phone.trim() || undefined,
+        email: cleanEmail || undefined,
+        phone: cleanPhone || undefined,
         avatar_base64: avatarBase64,
         avatar_mime_type: avatarMimeType,
-      });
+      })).unwrap();
       toast.success('Profile updated successfully!');
-    } catch (err) {
-      toast.error('Failed to update profile');
+    } catch (err: unknown) {
+      toast.error((err as string) || 'Failed to update profile');
     } finally {
       setIsSaving(false);
     }
@@ -108,6 +129,7 @@ export default function ProfilePage() {
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-32 h-32 rounded-full overflow-hidden bg-bg-secondary border-2 border-white/[0.05] flex items-center justify-center relative">
                   {avatarSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatarSrc} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon className="w-12 h-12 text-txt-muted" />
@@ -143,13 +165,13 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="text-xs font-medium text-txt-muted uppercase tracking-wider block mb-1.5">
-                    Email Address <span className="lowercase text-txt-muted/50">(read-only)</span>
+                    Email Address
                   </label>
                   <input
                     type="email"
                     value={email}
-                    disabled
-                    className="w-full bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-3 text-sm text-txt-muted cursor-not-allowed outline-none"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-white/[0.04] border border-white/[0.09] rounded-xl px-4 py-3 text-sm text-txt-primary outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
                   />
                 </div>
 
