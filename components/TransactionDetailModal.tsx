@@ -9,6 +9,32 @@ import { formatISTDateTime } from '../lib/dateUtils';
 import ReceiptViewer from './ReceiptViewer';
 import ConfirmDialog from './ConfirmDialog';
 
+const Row = ({
+  icon,
+  label,
+  value,
+  valueClass = '',
+  mono = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  valueClass?: string;
+  mono?: boolean;
+}) => (
+  <div className="flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-b-0">
+    <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0 mt-0.5">
+      {icon}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-txt-muted mb-0.5">{label}</p>
+      <p className={`text-sm text-txt-primary break-words ${mono ? 'font-mono' : 'font-medium'} ${valueClass}`}>
+        {value}
+      </p>
+    </div>
+  </div>
+);
+
 interface TransactionDetailModalProps {
   tx: Transaction | null;
   open: boolean;
@@ -36,31 +62,6 @@ export default function TransactionDetailModal({
   const updatedStr  = tx.updatedAt  ? formatISTDateTime(tx.updatedAt)  : '—';
   const wasEdited   = tx.updatedAt && tx.updatedAt !== tx.createdAt;
 
-  const Row = ({
-    icon,
-    label,
-    value,
-    valueClass = '',
-    mono = false,
-  }: {
-    icon: React.ReactNode;
-    label: string;
-    value: React.ReactNode;
-    valueClass?: string;
-    mono?: boolean;
-  }) => (
-    <div className="flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-b-0">
-      <div className="w-7 h-7 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0 mt-0.5">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-txt-muted mb-0.5">{label}</p>
-        <p className={`text-sm text-txt-primary break-words ${mono ? 'font-mono' : 'font-medium'} ${valueClass}`}>
-          {value}
-        </p>
-      </div>
-    </div>
-  );
 
   return (
     <AnimatePresence>

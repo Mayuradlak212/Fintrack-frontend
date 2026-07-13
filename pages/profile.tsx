@@ -25,6 +25,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(user.name);
       setEmail(user.email);
       setPhone(user.phone || '');
@@ -128,6 +129,7 @@ export default function ProfilePage() {
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-32 h-32 rounded-full overflow-hidden bg-bg-secondary border-2 border-white/[0.05] flex items-center justify-center relative">
                   {avatarSrc ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatarSrc} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon className="w-12 h-12 text-txt-muted" />

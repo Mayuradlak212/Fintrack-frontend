@@ -103,7 +103,7 @@ export async function fetchApi<T = unknown>(endpoint: string, options: FetchOpti
           response = await fetch(url, config);
           refreshed = true;
         }
-      } catch (err) {
+      } catch {
         // ignore and let it fall through to logout
       }
     }

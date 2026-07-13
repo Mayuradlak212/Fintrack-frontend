@@ -79,7 +79,8 @@ export default function Navbar({ onHamburger }: NavbarProps) {
               <Link href="/profile">
                 <div className="w-9 h-9 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer overflow-hidden">
                   {user.avatar_base64 ? (
-                    <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
+                    // eslint-disable-next-line @next/next/no-img-element
+          <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-4 h-4 text-accent" />
                   )}

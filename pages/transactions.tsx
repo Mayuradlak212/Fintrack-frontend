@@ -172,6 +172,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     if (currentPage > totalPages) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentPage(totalPages);
     }
   }, [totalPages, currentPage]);

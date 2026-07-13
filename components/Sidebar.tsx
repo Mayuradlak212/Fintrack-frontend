@@ -101,7 +101,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 <Link href="/profile">
                   <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center border border-accent/20 hover:border-accent/40 transition-colors cursor-pointer overflow-hidden shrink-0">
                     {user.avatar_base64 ? (
-                      <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
+                      // eslint-disable-next-line @next/next/no-img-element
+          <img src={`data:${user.avatar_mime_type};base64,${user.avatar_base64}`} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       <UserIcon className="w-5 h-5 text-accent" />
                     )}

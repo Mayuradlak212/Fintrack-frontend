@@ -69,14 +69,6 @@ export default function DashboardPage() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await dispatch(deleteTransaction(id)).unwrap();
-      toast.success('Transaction deleted');
-    } catch (err) {
-      toast.error('Failed to delete transaction');
-    }
-  };
 
   if (isLoading || !user) return null;
 

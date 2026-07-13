@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Transaction, TransactionForm, PaginatedFetchParams, PaginationState, TransactionState } from '../types';
+import { Transaction, TransactionForm, TransactionState } from '../types';
 import { fetchApi } from '../lib/api';
 
 

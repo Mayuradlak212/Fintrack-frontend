@@ -75,8 +75,9 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
         if (!isNaN(parsed.getTime())) {
           formattedDate = getLocalDatetimeString(parsed);
         }
-      } catch(e) {}
+      } catch {}
 
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         type: initial.type,
         amount: initial.amount,
@@ -99,7 +100,8 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
   }, [initial, open]);
 
   // ── Reverse-geocoding — LocationIQ (full address) ─────────────────────────
-  const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const reverseGeocode = useCallback(async (lat: number, lng: number): Promise<string> => {
     const LIQ_KEY = process.env.NEXT_PUBLIC_LOCATIONIQ_KEY;
     if (!LIQ_KEY) return '';
 
@@ -181,7 +183,7 @@ export default function TransactionModal({ open, onClose, onSave, initial }: Tra
       setIsSaving(true);
       await onSave(payload);
       onClose();
-    } catch (err) {
+    } catch {
       toast.error('Failed to save transaction');
     } finally {
       setIsSaving(false);

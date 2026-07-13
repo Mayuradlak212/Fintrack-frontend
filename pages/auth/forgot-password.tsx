@@ -1,14 +1,12 @@
+/* eslint-disable react/no-unescaped-entities */
 import React, { useState } from 'react';
-import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { Wallet, Mail, ArrowLeft, Send, CheckCircle2, Loader2 } from 'lucide-react';
 import { fetchApi } from '../../lib/api';
-import { toast } from '../../utils/toast';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
-  const [email, setEmail]     = useState('');
+    const [email, setEmail]     = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
   const [error, setError]     = useState('');
@@ -64,7 +62,7 @@ export default function ForgotPasswordPage() {
                 <div className="mb-6 text-center">
                   <h2 className="text-xl font-bold text-txt-primary mb-1.5">Forgot your password?</h2>
                   <p className="text-sm text-txt-muted leading-relaxed">
-                    No worries! Enter your email and we'll send you a reset link valid for 30 minutes.
+                    No worries! Enter your email and we&apos;ll send you a reset link valid for 30 minutes.
                   </p>
                 </div>
 
