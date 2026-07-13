@@ -1,11 +1,12 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { Transaction, TransactionForm, TransactionState } from '../types';
+import { Transaction, TransactionForm, TransactionState, SummaryData } from '../types';
 import { fetchApi } from '../lib/api';
 
 
 
 const initialState: TransactionState = {
   transactions: [],
+  summary: null,
   isLoading: false,
   isFetched: false,
   error: null,
@@ -41,6 +42,15 @@ export const fetchAllTransactions = createAsyncThunk('transactions/fetchAll', as
     return data.items.map(mapTx);
   } catch (err: unknown) {
     return rejectWithValue((err as Error).message || 'Failed to fetch transactions');
+  }
+});
+
+export const fetchSummary = createAsyncThunk('transactions/fetchSummary', async (_, { rejectWithValue }) => {
+  try {
+    const data = await fetchApi<SummaryData>('/api/transactions/summary');
+    return data;
+  } catch (err: unknown) {
+    return rejectWithValue((err as Error).message || 'Failed to fetch summary');
   }
 });
 
@@ -107,9 +117,22 @@ const transactionSlice = createSlice({
         state.isFetched = true;
         state.error = action.payload as string;
       })
+      // Fetch Summary
+      .addCase(fetchSummary.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchSummary.fulfilled, (state, action: PayloadAction<SummaryData>) => {
+        state.isLoading = false;
+        state.summary = action.payload;
+      })
+      .addCase(fetchSummary.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
       // Add
       .addCase(addTransaction.fulfilled, (state, action: PayloadAction<Transaction>) => {
         state.transactions.unshift(action.payload);
+        state.summary = null;
       })
       // Update
       .addCase(updateTransaction.fulfilled, (state, action: PayloadAction<Transaction>) => {
@@ -117,10 +140,12 @@ const transactionSlice = createSlice({
         if (index !== -1) {
           state.transactions[index] = action.payload;
         }
+        state.summary = null;
       })
       // Delete
       .addCase(deleteTransaction.fulfilled, (state, action: PayloadAction<string>) => {
         state.transactions = state.transactions.filter((t) => t.id !== action.payload);
+        state.summary = null;
       });
   }
 });

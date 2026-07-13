@@ -108,8 +108,20 @@ export interface PaginationState {
   pages: number;
 }
 
+export interface SummaryData {
+  total_credit: number;
+  total_debit: number;
+  balance: number;
+  count: number;
+  credit_count: number;
+  debit_count: number;
+  monthly: { month: string; credit: number; debit: number }[];
+  categories: { category: string; amount: number }[];
+}
+
 export interface TransactionState {
   transactions: Transaction[];
+  summary: SummaryData | null;
   isLoading: boolean;
   isFetched: boolean;
   error: string | null;
