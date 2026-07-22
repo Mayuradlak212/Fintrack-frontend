@@ -24,6 +24,7 @@ export default function AnalyticsPage() {
   const dispatch = useAppDispatch();
   const { summary, isLoading } = useAppSelector((state) => state.transactions);
   const { user } = useAppSelector((state) => state.auth);
+  const privacyMode = useAppSelector((state) => state.privacy.privacyMode);
   const router = useRouter();
 
   useEffect(() => {
@@ -82,7 +83,9 @@ export default function AnalyticsPage() {
               <Icon size={15} className="text-txt-muted" />
               <p className="text-xs font-medium text-txt-muted uppercase tracking-wider">{label}</p>
             </div>
-            <p className={`text-2xl font-extrabold tracking-tight ${cls}`}>{fmt(val)}</p>
+            <p className={`text-2xl font-extrabold tracking-tight ${cls}`}>
+              {privacyMode ? '******' : fmt(val)}
+            </p>
           </motion.div>
         ))}
       </div>

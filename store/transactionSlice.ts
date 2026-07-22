@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { Transaction, TransactionForm, TransactionState, SummaryData } from '../types';
 import { fetchApi } from '../lib/api';
+import { resetStore } from './authSlice';
 
 
 
@@ -146,7 +147,9 @@ const transactionSlice = createSlice({
       .addCase(deleteTransaction.fulfilled, (state, action: PayloadAction<string>) => {
         state.transactions = state.transactions.filter((t) => t.id !== action.payload);
         state.summary = null;
-      });
+      })
+      // Reset entire store on logout
+      .addCase(resetStore, () => initialState);
   }
 });
 

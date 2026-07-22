@@ -66,8 +66,15 @@ const authSlice = createSlice({
   reducers: {
     logout(state) {
       state.user = null;
+      state.error = null;
       removeToken();
-    }
+    },
+    resetStore() {
+      // Intercepted by other slices to reset their state on logout.
+    },
+    setIsLoading(state, action: PayloadAction<boolean>) {
+      state.isLoading = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -118,5 +125,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, resetStore, setIsLoading } = authSlice.actions;
 export default authSlice.reducer;

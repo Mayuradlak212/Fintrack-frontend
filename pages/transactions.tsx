@@ -108,6 +108,7 @@ export default function TransactionsPage() {
   const dispatch = useAppDispatch();
   const { transactions, isLoading: txLoading, isFetched } = useAppSelector((state) => state.transactions);
   const { user, isLoading } = useAppSelector((state) => state.auth);
+  const privacyMode = useAppSelector((state) => state.privacy.privacyMode);
   const router = useRouter();
 
   // ── UI state ──────────────────────────────────────────────────────────────
@@ -271,7 +272,7 @@ export default function TransactionsPage() {
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
           <p className="text-[9px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Credit</p>
           <p className="text-xs sm:text-lg font-extrabold text-credit-light mt-0.5">
-            +{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_credit)}
+            {privacyMode ? '******' : `+${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_credit)}`}
           </p>
         </div>
 
@@ -280,7 +281,7 @@ export default function TransactionsPage() {
           <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full blur-xl pointer-events-none" />
           <p className="text-[9px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Total Debit</p>
           <p className="text-xs sm:text-lg font-extrabold text-debit-light mt-0.5">
-            -{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_debit)}
+            {privacyMode ? '******' : `-${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.total_debit)}`}
           </p>
         </div>
 
@@ -289,7 +290,7 @@ export default function TransactionsPage() {
           <div className="absolute top-0 right-0 w-16 h-16 bg-accent/5 rounded-full blur-xl pointer-events-none" />
           <p className="text-[9px] sm:text-xs font-semibold text-txt-muted uppercase tracking-wider">Net Balance</p>
           <p className={`text-xs sm:text-lg font-extrabold mt-0.5 ${summary.balance >= 0 ? 'text-credit-light' : 'text-debit-light'}`}>
-            {summary.balance >= 0 ? '+' : ''}{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.balance)}
+            {privacyMode ? '******' : `${summary.balance >= 0 ? '+' : ''}${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(summary.balance)}`}
           </p>
         </div>
       </div>
