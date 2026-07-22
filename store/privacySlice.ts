@@ -6,7 +6,7 @@ interface PrivacyState {
 }
 
 const initialState: PrivacyState = {
-  privacyMode: false,
+  privacyMode: true,
 };
 
 const privacySlice = createSlice({
