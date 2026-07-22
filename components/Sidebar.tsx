@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, X, Wallet, User as UserIcon, Receipt, PieChart, Settings, Menu } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store';
-import { logout } from '../store/authSlice';
+import { logout, resetStore } from '../store/authSlice';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -117,7 +117,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
             {/* Logout */}
             <button
-              onClick={() => { dispatch(logout()); router.push('/auth/login'); onClose(); }}
+              onClick={() => { dispatch(resetStore()); dispatch(logout()); router.push('/auth/login'); onClose(); }}
               className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-red-500/25 bg-red-500/8 text-debit-light text-sm font-medium hover:bg-red-500/15 transition-colors mt-2 w-full cursor-pointer"
             >
               <LogOut size={15} />

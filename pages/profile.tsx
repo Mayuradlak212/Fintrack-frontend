@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useAppDispatch, useAppSelector } from '../store';
 import { updateProfile } from '../store/authSlice';
-import { Camera, Save, User as UserIcon, Loader2 } from 'lucide-react';
+import { togglePrivacyMode } from '../store/privacySlice';
+import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from '../utils/toast';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
@@ -12,6 +13,7 @@ import pkg from '../package.json';
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((state) => state.auth);
+  const privacyMode = useAppSelector((state) => state.privacy.privacyMode);
   const router = useRouter();
   
   const [name, setName] = useState('');
@@ -216,6 +218,32 @@ export default function ProfilePage() {
               </button>
             </div>
           </form>
+
+          {/* Privacy Mode Toggle */}
+          <div className="mt-6 p-4 bg-white/[0.03] border border-white/[0.07] rounded-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${privacyMode ? 'bg-accent/20' : 'bg-white/[0.05]'}`}>
+                {privacyMode ? <EyeOff size={16} className="text-accent-light" /> : <Eye size={16} className="text-txt-muted" />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-txt-primary">Privacy Mode</p>
+                <p className="text-xs text-txt-muted mt-0.5">Mask financial figures on dashboard, transactions &amp; analytics</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={privacyMode}
+              onClick={() => dispatch(togglePrivacyMode())}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer shrink-0
+                ${privacyMode ? 'bg-accent' : 'bg-white/[0.12]'}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ease-in-out
+                  ${privacyMode ? 'translate-x-6' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
 
           {/* Version footer */}
           <div className="mt-6 text-center">

@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
+import { useAppSelector } from '../store';
 
 interface SummaryCardProps {
   title: string;
@@ -37,11 +38,15 @@ const colorMap = {
 
 export default function SummaryCard({ title, amount, icon: Icon, color, delay = 0, subtitle }: SummaryCardProps) {
   const c = colorMap[color];
-  const formatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-  }).format(amount);
+  const privacyMode = useAppSelector((state) => state.privacy.privacyMode);
+
+  const formatted = privacyMode
+    ? '******'
+    : new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2,
+      }).format(amount);
 
   return (
     <motion.div
@@ -57,7 +62,9 @@ export default function SummaryCard({ title, amount, icon: Icon, color, delay = 
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-txt-muted uppercase tracking-widest mb-2">{title}</p>
-          <p className={`text-2xl font-extrabold tracking-tight leading-none ${c.text}`}>{formatted}</p>
+          <p className={`text-2xl font-extrabold tracking-tight leading-none ${c.text} ${privacyMode ? 'tracking-[0.2em]' : ''}`}>
+            {formatted}
+          </p>
           {subtitle && <p className="text-xs text-txt-muted mt-1.5">{subtitle}</p>}
         </div>
         <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${c.iconBg} ${c.glow}`}>

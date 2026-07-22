@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { LayoutDashboard, ArrowLeftRight, BarChart2, LogOut, Wallet, User } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../store';
-import { logout } from '../store/authSlice';
+import { logout, resetStore } from '../store/authSlice';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -89,7 +89,7 @@ export default function Navbar({ onHamburger }: NavbarProps) {
             </div>
           )}
           <button
-            onClick={() => { dispatch(logout()); router.push('/auth/login'); }}
+            onClick={() => { dispatch(resetStore()); dispatch(logout()); router.push('/auth/login'); }}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-debit-light text-xs font-medium hover:bg-red-500/20 transition-colors"
           >
             <LogOut size={13} />
