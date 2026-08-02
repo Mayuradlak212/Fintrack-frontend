@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { Wallet, Eye, EyeOff, Lock, Mail, ArrowRight, User as UserIcon } from 'lucide-react';
+import { Wallet, Eye, EyeOff, Lock, Mail, ArrowRight, User as UserIcon, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { login, register } from '../../store/authSlice';
+import { login, register, verifyMfa } from '../../store/authSlice';
 import { toast } from '../../utils/toast';
 import { LoginFormSchema, RegisterFormSchema } from '../../types';
 import Link from 'next/link';
@@ -26,6 +26,46 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Set once the password is accepted but 2FA is still outstanding.
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+
+  const resetToPassword = () => {
+    setMfaToken(null);
+    setCode('');
+    setError('');
+    setPassword('');
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaToken) return;
+
+    const clean = code.trim();
+    if (clean.length < 6) {
+      setError('Enter the 6-digit code from your authenticator app.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      await dispatch(verifyMfa({ mfa_token: mfaToken, code: clean })).unwrap();
+      toast.success('Welcome back! 👋');
+      router.push('/');
+    } catch (err: unknown) {
+      const msg = typeof err === 'string' ? err : 'Verification failed';
+      setError(msg);
+      // The challenge is burned after too many tries — send them back to step 1.
+      if (msg.toLowerCase().includes('sign in again')) {
+        setMfaToken(null);
+        setCode('');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +98,13 @@ export default function LoginPage() {
         toast.success('Account created successfully! 👋');
         router.push('/');
       } else {
-        await dispatch(login({ email, password })).unwrap();
+        const result = await dispatch(login({ email, password })).unwrap();
+        // 2FA enabled — swap to the code step instead of navigating.
+        if (result && typeof result === 'object' && 'mfaToken' in result) {
+          setMfaToken(result.mfaToken);
+          setLoading(false);
+          return;
+        }
         toast.success('Welcome back! 👋');
         router.push('/');
       }
@@ -107,6 +153,68 @@ export default function LoginPage() {
 
         {/* Card */}
         <div className="bg-bg-card border border-white/[0.08] rounded-2xl p-6 shadow-[0_24px_60px_rgba(0,0,0,0.5)]">
+          {mfaToken ? (
+            /* ── Step 2: two-factor code ── */
+            <>
+              <div className="flex flex-col items-center text-center mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-accent/15 border border-accent/25 flex items-center justify-center mb-3">
+                  <ShieldCheck size={22} className="text-accent-light" />
+                </div>
+                <h2 className="text-lg font-bold text-txt-primary mb-1">Two-Factor Authentication</h2>
+                <p className="text-xs text-txt-muted">
+                  Enter the 6-digit code from your authenticator app
+                </p>
+              </div>
+
+              <form onSubmit={handleVerify} className="flex flex-col gap-4">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  placeholder="000000"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/[^\w-]/g, '').slice(0, 20))}
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.09] rounded-xl text-center text-lg font-semibold tracking-[0.4em] text-txt-primary placeholder:text-txt-muted placeholder:tracking-[0.4em] outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
+                />
+
+                <p className="text-[11px] text-txt-muted text-center -mt-1">
+                  Lost your device? Enter one of your backup codes instead.
+                </p>
+
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-xs text-debit-light bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-accent to-accent-light shadow-[0_4px_16px_rgba(124,58,237,0.4)] hover:shadow-[0_6px_22px_rgba(124,58,237,0.5)] disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {loading ? (
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>Verify <ArrowRight size={15} /></>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetToPassword}
+                  className="text-xs text-txt-muted hover:text-txt-secondary transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <ArrowLeft size={13} /> Back to sign in
+                </button>
+              </form>
+            </>
+          ) : (
+          <>
           <div className="flex justify-between items-end mb-5">
             <div>
               <h2 className="text-lg font-bold text-txt-primary mb-1">
@@ -226,6 +334,8 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          </>
+          )}
         </div>
 
       </motion.div>

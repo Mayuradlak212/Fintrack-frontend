@@ -57,6 +57,7 @@ export const UserSchema = z.object({
   avatar_base64: z.string().nullish(),
   avatar_mime_type: z.string().nullish(),
   phone: z.string().nullish(),
+  totp_enabled: z.boolean().nullish(),
 });
 
 // ─── Login/Register form ──────────────────────────────────────────────────────

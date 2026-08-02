@@ -20,12 +20,23 @@ export const restoreSession = createAsyncThunk('auth/restoreSession', async (_, 
   }
 });
 
+type LoginResponse =
+  | { access_token: string; refresh_token: string; user: User }
+  | { mfa_required: true; mfa_token: string; message: string };
+
+/**
+ * Resolves to `{ mfaToken }` when the account has 2FA enabled — no session is
+ * established until `verifyMfa` completes. Otherwise resolves to the user.
+ */
 export const login = createAsyncThunk('auth/login', async (data: LoginForm, { rejectWithValue }) => {
   try {
-    const res = await fetchApi<{ access_token: string; refresh_token: string; user: User }>('/api/auth/login', {
+    const res = await fetchApi<LoginResponse>('/api/auth/login', {
       method: 'POST',
       data,
     });
+    if ('mfa_required' in res) {
+      return { mfaToken: res.mfa_token };
+    }
     setToken(res.access_token);
     setRefreshToken(res.refresh_token);
     return res.user;
@@ -33,6 +44,23 @@ export const login = createAsyncThunk('auth/login', async (data: LoginForm, { re
     return rejectWithValue((err as Error).message || 'Login failed');
   }
 });
+
+export const verifyMfa = createAsyncThunk(
+  'auth/verifyMfa',
+  async (data: { mfa_token: string; code: string }, { rejectWithValue }) => {
+    try {
+      const res = await fetchApi<{ access_token: string; refresh_token: string; user: User }>(
+        '/api/auth/login/verify',
+        { method: 'POST', data },
+      );
+      setToken(res.access_token);
+      setRefreshToken(res.refresh_token);
+      return res.user;
+    } catch (err: unknown) {
+      return rejectWithValue((err as Error).message || 'Verification failed');
+    }
+  },
+);
 
 export const register = createAsyncThunk('auth/register', async (data: RegisterForm, { rejectWithValue }) => {
   try {
@@ -97,11 +125,27 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action: PayloadAction<User>) => {
+      .addCase(login.fulfilled, (state, action: PayloadAction<User | { mfaToken: string }>) => {
+        state.isLoading = false;
+        // A 2FA challenge is not a session — leave `user` null until verifyMfa.
+        if (!('mfaToken' in action.payload)) {
+          state.user = action.payload;
+        }
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // MFA verification
+      .addCase(verifyMfa.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(verifyMfa.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload;
       })
-      .addCase(login.rejected, (state, action) => {
+      .addCase(verifyMfa.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })

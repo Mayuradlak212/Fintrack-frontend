@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useAppDispatch, useAppSelector } from '../store';
-import { updateProfile } from '../store/authSlice';
+import { updateProfile, restoreSession } from '../store/authSlice';
+import TotpSetupModal from '../components/TotpSetupModal';
+import { fetchApi } from '../lib/api';
 import { togglePrivacyMode } from '../store/privacySlice';
 import { setEnabled as setBiometricEnabled } from '../store/biometricSlice';
 import { enrollBiometric, clearBiometric } from '../lib/biometric';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff, Fingerprint } from 'lucide-react';
+import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff, Fingerprint, ShieldCheck, X } from 'lucide-react';
 import { toast } from '../utils/toast';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
@@ -22,6 +24,13 @@ export default function ProfilePage() {
 
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [confirmDisableBiometric, setConfirmDisableBiometric] = useState(false);
+
+  const totpEnabled = !!user?.totp_enabled;
+  const [showTotpSetup, setShowTotpSetup] = useState(false);
+  const [showTotpDisable, setShowTotpDisable] = useState(false);
+  const [disablePassword, setDisablePassword] = useState('');
+  const [disableError, setDisableError] = useState('');
+  const [isDisabling, setIsDisabling] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -136,6 +145,41 @@ export default function ProfilePage() {
     dispatch(setBiometricEnabled(false));
     setConfirmDisableBiometric(false);
     toast.success('Biometric unlock disabled');
+  };
+
+  const handleTotpToggle = () => {
+    if (totpEnabled) {
+      setDisablePassword('');
+      setDisableError('');
+      setShowTotpDisable(true);
+    } else {
+      setShowTotpSetup(true);
+    }
+  };
+
+  const handleDisableTotp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disablePassword) {
+      setDisableError('Enter your password to continue.');
+      return;
+    }
+
+    setIsDisabling(true);
+    setDisableError('');
+    try {
+      await fetchApi('/api/auth/totp/disable', {
+        method: 'POST',
+        data: { password: disablePassword },
+      });
+      await dispatch(restoreSession());
+      setShowTotpDisable(false);
+      setDisablePassword('');
+      toast.success('Two-factor authentication disabled');
+    } catch (err: unknown) {
+      setDisableError((err as Error).message || 'Could not disable two-factor authentication');
+    } finally {
+      setIsDisabling(false);
+    }
   };
 
   useEffect(() => {
@@ -320,6 +364,37 @@ export default function ProfilePage() {
             </button>
           </div>
 
+          {/* Two-Factor Authentication Toggle */}
+          <div className="mt-4 p-4 bg-white/[0.03] border border-white/[0.07] rounded-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${totpEnabled ? 'bg-accent/20' : 'bg-white/[0.05]'}`}>
+                <ShieldCheck size={16} className={totpEnabled ? 'text-accent-light' : 'text-txt-muted'} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-txt-primary">Two-Factor Authentication</p>
+                <p className="text-xs text-txt-muted mt-0.5">
+                  {totpEnabled
+                    ? 'A code from your authenticator app is required at sign-in'
+                    : 'Require a code from your authenticator app when signing in'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={totpEnabled}
+              aria-label="Two-factor authentication"
+              onClick={handleTotpToggle}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer shrink-0
+                ${totpEnabled ? 'bg-accent' : 'bg-white/[0.12]'}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ease-in-out
+                  ${totpEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+
           {/* Version footer */}
           <div className="mt-6 text-center">
             <p className="text-[11px] text-txt-muted/40 font-semibold tracking-wider uppercase">
@@ -328,6 +403,81 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </div>
+
+      <TotpSetupModal
+        open={showTotpSetup}
+        onClose={() => setShowTotpSetup(false)}
+        onEnabled={() => { dispatch(restoreSession()); }}
+      />
+
+      {/* Disabling 2FA requires the password, so this needs an input ConfirmDialog can't provide. */}
+      {showTotpDisable && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-md z-[200]"
+            onClick={() => setShowTotpDisable(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            role="dialog"
+            aria-modal="true"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[201]
+              w-[90%] max-w-sm bg-bg-card border border-white/[0.08] rounded-2xl p-6
+              shadow-[0_24px_60px_rgba(0,0,0,0.65)]"
+          >
+            <button
+              onClick={() => setShowTotpDisable(false)}
+              aria-label="Close"
+              className="absolute top-4 right-4 text-txt-muted hover:text-txt-secondary transition-colors cursor-pointer"
+            >
+              <X size={17} />
+            </button>
+
+            <h3 className="text-base font-bold text-txt-primary mb-1.5">Disable two-factor authentication?</h3>
+            <p className="text-sm text-txt-secondary leading-relaxed mb-5">
+              Your account will be protected by your password alone. Enter it to confirm.
+            </p>
+
+            <form onSubmit={handleDisableTotp} className="space-y-4">
+              <input
+                type="password"
+                autoComplete="current-password"
+                autoFocus
+                placeholder="Current password"
+                value={disablePassword}
+                onChange={(e) => setDisablePassword(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/[0.09] rounded-xl text-sm text-txt-primary placeholder:text-txt-muted outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent transition-all"
+              />
+
+              {disableError && (
+                <p className="text-xs text-debit-light bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl">
+                  {disableError}
+                </p>
+              )}
+
+              <div className="flex gap-2.5 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowTotpDisable(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-txt-secondary border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDisabling}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-debit-light shadow-[0_4px_14px_rgba(239,68,68,0.35)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.45)] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-2"
+                >
+                  {isDisabling && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Disable
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </>
+      )}
 
       <ConfirmDialog
         open={confirmDisableBiometric}
