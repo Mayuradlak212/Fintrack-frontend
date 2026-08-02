@@ -8,9 +8,11 @@ interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Label for the destructive action button. Defaults to "Delete". */
+  confirmLabel?: string;
 }
 
-export default function ConfirmDialog({ open, title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+export default function ConfirmDialog({ open, title, message, onConfirm, onCancel, confirmLabel = 'Delete' }: ConfirmDialogProps) {
   return (
     <AnimatePresence>
       {open && (
@@ -62,7 +64,7 @@ export default function ConfirmDialog({ open, title, message, onConfirm, onCance
                 onClick={onConfirm}
                 className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-debit-light shadow-[0_4px_14px_rgba(239,68,68,0.35)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.45)] transition-all cursor-pointer"
               >
-                Delete
+                {confirmLabel}
               </button>
             </div>
           </motion.div>

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { ToastContainer } from '../utils/toast';
+import BiometricGate from '../components/BiometricGate';
 import { Provider } from 'react-redux';
 import { store, useAppDispatch } from '../store';
 import { restoreSession, setIsLoading } from '../store/authSlice';
@@ -36,7 +37,9 @@ export default function App({ Component, pageProps }: AppProps) {
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
       <AuthInit>
-        <Component {...pageProps} />
+        <BiometricGate>
+          <Component {...pageProps} />
+        </BiometricGate>
         <ToastContainer />
       </AuthInit>
     </Provider>

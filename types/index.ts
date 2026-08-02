@@ -93,6 +93,15 @@ export interface AuthState {
   error: string | null;
 }
 
+export interface BiometricState {
+  /** User has enrolled a platform authenticator in this browser. */
+  enabled: boolean;
+  /** Gate is up — the app must not render until verification succeeds. */
+  isLocked: boolean;
+  /** Device exposes a user-verifying platform authenticator. */
+  isSupported: boolean;
+}
+
 export interface PaginatedFetchParams {
   page: number;
   per_page?: number;

@@ -3,7 +3,10 @@ import Layout from '../components/Layout';
 import { useAppDispatch, useAppSelector } from '../store';
 import { updateProfile } from '../store/authSlice';
 import { togglePrivacyMode } from '../store/privacySlice';
-import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff } from 'lucide-react';
+import { setEnabled as setBiometricEnabled } from '../store/biometricSlice';
+import { enrollBiometric, clearBiometric } from '../lib/biometric';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { toast } from '../utils/toast';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
@@ -14,8 +17,12 @@ export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((state) => state.auth);
   const privacyMode = useAppSelector((state) => state.privacy.privacyMode);
+  const { enabled: biometricEnabled, isSupported: biometricSupported } = useAppSelector((state) => state.biometric);
   const router = useRouter();
-  
+
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [confirmDisableBiometric, setConfirmDisableBiometric] = useState(false);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -98,6 +105,37 @@ export default function ProfilePage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleBiometricToggle = async () => {
+    if (biometricEnabled) {
+      setConfirmDisableBiometric(true);
+      return;
+    }
+    if (!user) return;
+
+    setIsEnrolling(true);
+    try {
+      await enrollBiometric(user.email, user.name);
+      dispatch(setBiometricEnabled(true));
+      toast.success('Biometric unlock enabled');
+    } catch (err: unknown) {
+      const name = (err as Error)?.name;
+      toast.error(
+        name === 'NotAllowedError'
+          ? 'Setup was cancelled'
+          : 'Could not set up biometric unlock on this device'
+      );
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  const handleDisableBiometric = () => {
+    clearBiometric();
+    dispatch(setBiometricEnabled(false));
+    setConfirmDisableBiometric(false);
+    toast.success('Biometric unlock disabled');
   };
 
   useEffect(() => {
@@ -245,6 +283,43 @@ export default function ProfilePage() {
             </button>
           </div>
 
+          {/* Biometric Unlock Toggle */}
+          <div className="mt-4 p-4 bg-white/[0.03] border border-white/[0.07] rounded-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${biometricEnabled ? 'bg-accent/20' : 'bg-white/[0.05]'}`}>
+                <Fingerprint size={16} className={biometricEnabled ? 'text-accent-light' : 'text-txt-muted'} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-txt-primary">Biometric Unlock</p>
+                <p className="text-xs text-txt-muted mt-0.5">
+                  {biometricSupported
+                    ? 'Require fingerprint or face ID before opening FinTrack on this device'
+                    : 'Not available on this device or browser'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={biometricEnabled}
+              aria-label="Biometric unlock"
+              disabled={!biometricSupported || isEnrolling}
+              onClick={handleBiometricToggle}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer shrink-0
+                disabled:opacity-40 disabled:cursor-not-allowed
+                ${biometricEnabled ? 'bg-accent' : 'bg-white/[0.12]'}`}
+            >
+              {isEnrolling ? (
+                <Loader2 className="w-3.5 h-3.5 mx-auto text-white animate-spin" />
+              ) : (
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ease-in-out
+                    ${biometricEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                />
+              )}
+            </button>
+          </div>
+
           {/* Version footer */}
           <div className="mt-6 text-center">
             <p className="text-[11px] text-txt-muted/40 font-semibold tracking-wider uppercase">
@@ -253,6 +328,15 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDisableBiometric}
+        title="Disable biometric unlock?"
+        message="FinTrack will open without asking for your fingerprint or face ID on this device. You can turn it back on any time."
+        confirmLabel="Disable"
+        onConfirm={handleDisableBiometric}
+        onCancel={() => setConfirmDisableBiometric(false)}
+      />
     </Layout>
   );
 }
