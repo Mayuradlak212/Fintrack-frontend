@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { ToastContainer } from '../utils/toast';
 import BiometricGate from '../components/BiometricGate';
+import RateLimitNotice from '../components/RateLimitNotice';
 import { Provider } from 'react-redux';
 import { store, useAppDispatch } from '../store';
 import { restoreSession, setIsLoading } from '../store/authSlice';
@@ -40,6 +41,9 @@ export default function App({ Component, pageProps }: AppProps) {
         <BiometricGate>
           <Component {...pageProps} />
         </BiometricGate>
+        {/* Outside BiometricGate so the countdown is still visible on the
+            lock screen and the auth pages, which is where limits bite most. */}
+        <RateLimitNotice />
         <ToastContainer />
       </AuthInit>
     </Provider>
