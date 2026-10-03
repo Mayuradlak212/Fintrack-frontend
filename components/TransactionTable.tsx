@@ -8,6 +8,7 @@ import { Transaction } from '../types';
 import ConfirmDialog from './ConfirmDialog';
 import ReceiptViewer from './ReceiptViewer';
 import { formatISTDateTime } from '../lib/dateUtils';
+import { useAppSelector } from '../store';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -124,6 +125,8 @@ export default function TransactionTable({
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
+  const hideAmounts = useAppSelector((state) => state.privacy.hideTransactionAmounts);
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('desc'); }
@@ -192,7 +195,9 @@ export default function TransactionTable({
               ) : (
                 sorted.map((tx, i) => {
                   const isCredit = tx.type === 'credit';
-                  const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
+                  const fmt = hideAmounts
+                    ? '••••••'
+                    : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
                   const date = formatISTDateTime(tx.date);
 
                   return (

@@ -6,6 +6,7 @@ import ConfirmDialog from './ConfirmDialog';
 import ReceiptViewer from './ReceiptViewer';
 import TransactionDetailModal from './TransactionDetailModal';
 import { formatISTDateTime } from '../lib/dateUtils';
+import { useAppSelector } from '../store';
 
 interface TransactionCardProps {
   tx: Transaction;
@@ -19,8 +20,12 @@ export default function TransactionCard({ tx, index, onEdit, onDelete }: Transac
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [detailOpen, setDetailOpen]   = useState(false);
 
+  const hideAmounts = useAppSelector((state) => state.privacy.hideTransactionAmounts);
+
   const isCredit  = tx.type === 'credit';
-  const formatted = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
+  const formatted = hideAmounts
+    ? '••••••'
+    : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount);
   const dateStr   = formatISTDateTime(tx.date);
   const wasEdited = tx.updatedAt && tx.updatedAt !== tx.createdAt;
   const updatedStr = wasEdited ? formatISTDateTime(tx.updatedAt!) : null;

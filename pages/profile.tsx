@@ -4,11 +4,11 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { updateProfile, restoreSession } from '../store/authSlice';
 import TotpSetupModal from '../components/TotpSetupModal';
 import { fetchApi } from '../lib/api';
-import { togglePrivacyMode } from '../store/privacySlice';
+import { togglePrivacyMode, toggleHideTransactionAmounts } from '../store/privacySlice';
 import { setEnabled as setBiometricEnabled } from '../store/biometricSlice';
 import { enrollBiometric, clearBiometric } from '../lib/biometric';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff, Fingerprint, ShieldCheck, X } from 'lucide-react';
+import { Camera, Save, User as UserIcon, Loader2, Eye, EyeOff, Fingerprint, ShieldCheck, X, DollarSign } from 'lucide-react';
 import { toast } from '../utils/toast';
 import { motion } from 'framer-motion';
 import Head from 'next/head';
@@ -19,6 +19,7 @@ export default function ProfilePage() {
   const dispatch = useAppDispatch();
   const { user, isLoading } = useAppSelector((state) => state.auth);
   const privacyMode = useAppSelector((state) => state.privacy.privacyMode);
+  const hideTransactionAmounts = useAppSelector((state) => state.privacy.hideTransactionAmounts);
   const { enabled: biometricEnabled, isSupported: biometricSupported } = useAppSelector((state) => state.biometric);
   const router = useRouter();
 
@@ -318,6 +319,32 @@ export default function ProfilePage() {
               <span
                 className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ease-in-out
                   ${privacyMode ? 'translate-x-6' : 'translate-x-1'}`}
+              />
+            </button>
+          </div>
+
+          {/* Hide Transaction Amounts Toggle */}
+          <div className="mt-4 p-4 bg-white/[0.03] border border-white/[0.07] rounded-2xl flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${hideTransactionAmounts ? 'bg-accent/20' : 'bg-white/[0.05]'}`}>
+                <DollarSign size={16} className={hideTransactionAmounts ? 'text-accent-light' : 'text-txt-muted'} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-txt-primary">Hide Transaction Amounts</p>
+                <p className="text-xs text-txt-muted mt-0.5">Mask individual transaction amounts in lists &amp; tables</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={hideTransactionAmounts}
+              onClick={() => dispatch(toggleHideTransactionAmounts())}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none cursor-pointer shrink-0
+                ${hideTransactionAmounts ? 'bg-accent' : 'bg-white/[0.12]'}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 ease-in-out
+                  ${hideTransactionAmounts ? 'translate-x-6' : 'translate-x-1'}`}
               />
             </button>
           </div>
