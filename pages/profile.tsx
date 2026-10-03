@@ -61,11 +61,6 @@ export default function ProfilePage() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
-      return;
-    }
-
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64Str = (reader.result as string).split(',')[1];
